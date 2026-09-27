@@ -205,6 +205,24 @@
   #result-score{ font-size:44px; color:var(--orange); }
   #result-msg{ font-size:15.5px; color:#333; max-width:330px; }
   #prize-box{ display:none; flex-direction:column; align-items:center; gap:6px; margin-top:4px; }
+  #signup-box{
+    display:none; flex-direction:column; gap:6px; width:100%; max-width:340px; margin-top:6px;
+    background:#fff; border:2px solid var(--green); border-radius:16px; padding:14px; text-align:left;
+  }
+  #signup-box .su-title{ font-weight:bold; color:var(--green); font-size:16px; text-align:center; margin-bottom:2px; }
+  #signup-box label{ font-size:13px; font-weight:bold; color:#444; }
+  #signup-box input:not([type=checkbox]), #signup-box select{
+    width:100%; font-size:16px; /* 16px stops iOS zooming into the field */
+    padding:9px 10px; border:1.5px solid #cdbfa9; border-radius:10px; background:#fffdf9; color:#222;
+    -webkit-user-select:text; user-select:text;
+  }
+  #signup-box input:focus, #signup-box select:focus{ outline:2px solid var(--orange); border-color:var(--orange); }
+  #signup-box .su-row{ display:flex; gap:10px; }
+  #signup-box .su-row > div{ flex:1; display:flex; flex-direction:column; gap:6px; }
+  #signup-box .su-consent{ display:flex; gap:8px; align-items:flex-start; font-weight:normal; font-size:12.5px; color:#555; line-height:1.4; margin-top:4px; }
+  #signup-box .su-consent input{ margin-top:2px; width:18px; height:18px; flex:none; }
+  #su-error{ color:var(--red); font-size:13px; font-weight:bold; min-height:0; }
+  #su-submit{ align-self:center; margin-top:4px; }
   .code{ background:#fff; border:3px dashed var(--green); border-radius:14px; padding:10px 22px; font-size:30px; font-weight:bold; letter-spacing:3px; color:var(--green-dark); }
   .code.small{ font-size:22px; padding:6px 16px; border-width:2px; }
   #prize-range{ font-size:16px; font-weight:bold; color:var(--orange); }
@@ -348,6 +366,34 @@
     <div class="caught">Bạn hứng được</div>
     <div class="score-line"><span id="result-score">0</span> hạt đác</div>
     <div id="result-msg"></div>
+    <form id="signup-box" novalidate>
+      <div class="su-title">Điền thông tin để nhận mã quà 🎁</div>
+      <label for="su-name">Họ tên</label>
+      <input id="su-name" autocomplete="name" maxlength="60" placeholder="Nguyễn Văn A">
+      <label for="su-phone">Số điện thoại</label>
+      <input id="su-phone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="13" placeholder="0905 123 456">
+      <div class="su-row">
+        <div><label for="su-year">Năm sinh</label><select id="su-year"></select></div>
+        <div><label for="su-gender">Giới tính</label>
+          <select id="su-gender"><option value="">Chọn</option><option>Nam</option><option>Nữ</option><option>Khác</option></select></div>
+      </div>
+      <label for="su-place">Địa phương</label>
+      <select id="su-place">
+        <option value="">Chọn</option>
+        <option>Nha Trang</option>
+        <option>Khánh Hòa (ngoài Nha Trang)</option>
+        <option>TP. Hồ Chí Minh</option>
+        <option>Hà Nội</option>
+        <option>Đà Nẵng</option>
+        <option>Tỉnh/thành khác</option>
+        <option>Khách nước ngoài</option>
+      </select>
+      <input id="su-place-other" maxlength="40" placeholder="Nhập tỉnh/thành của bạn" hidden>
+      <label class="su-consent"><input type="checkbox" id="su-consent">
+        <span>Tôi đồng ý cho HAMICHEE lưu thông tin này để gửi ưu đãi và chăm sóc khách hàng. Thông tin chỉ dùng nội bộ, không chia sẻ cho bên thứ ba.</span></label>
+      <div id="su-error"></div>
+      <button type="submit" class="btn-main" id="su-submit">Nhận mã quà</button>
+    </form>
     <div id="prize-box">
       <div id="prize-range"></div>
       <div id="prize-cond"></div>
@@ -380,6 +426,7 @@
     validDays: 6,        // mã dùng từ ngày hôm sau đến hết N ngày kể từ ngày chơi (≤6: iPhone có thể tự xóa dữ liệu sau 7 ngày)
     maxVouchers: 3,      // tối đa bao nhiêu mã chưa dùng trên 1 máy
     zaloOA: '',          // link "Quan tâm" Zalo OA của quán, vd 'https://zalo.me/xxxxxxxxxxxx' — để trống thì ẩn nút
+    sheetUrl: 'https://script.google.com/macros/s/AKfycbz53HiMjoKMbZh6ZBtPu6DHh9YEdgP-ro5ubKj-cOmN2J27RpvKFAB-Jei7Mum6KveeWA/exec', // nhận thông tin khách → Google Sheet "HAMICHEE - Khách chơi game"
     toppingText: 'Tặng 1 topping bất kỳ',
     discountText: 'Giảm 10% hóa đơn',
     discountTerms: 'tối đa 10.000đ, hóa đơn từ 40.000đ',
@@ -1000,6 +1047,7 @@
       r.capped = true; // already holding the maximum of unused codes: no new one
     } else if (tier){
       // Code = prize letter (G giảm giá / T topping) + play date DDMM + 3 random digits, e.g. G2709-164.
+      // It becomes a usable voucher only after the customer fills in the sign-up form.
       var all = loadVouchers(), code;
       do {
         code = (tier === 2 ? 'G' : 'T') + today.slice(8,10) + today.slice(5,7) + '-' +
@@ -1008,10 +1056,7 @@
       r.code = code;
       r.validFrom = addDays(today, 1);
       r.validTo = addDays(today, CONFIG.validDays);
-      all.push({ code:code, tier:tier, playDate:today, validFrom:r.validFrom, validTo:r.validTo,
-                 used:false, usedAt:null, usedDate:null });
-      var cutoff = addDays(today, -14); // forget long-expired codes
-      saveJSON(VOUCHER_KEY, all.filter(function(v){ return v.validTo >= cutoff; }));
+      r.pendingForm = true;
     }
     saveJSON(LAST_KEY, r); // saved before the pause below, so a reload keeps the result
 
@@ -1026,6 +1071,77 @@
       renderResult(r);
     }, 900);
   }
+
+  // Turn the prize into a voucher (after the sign-up form is sent).
+  function issueVoucher(r){
+    var all = loadVouchers();
+    if (!all.some(function(v){ return v.code === r.code; })){
+      all.push({ code:r.code, tier:r.tier, playDate:r.date, validFrom:r.validFrom, validTo:r.validTo,
+                 used:false, usedAt:null, usedDate:null });
+    }
+    var cutoff = addDays(r.date, -14); // forget long-expired codes
+    saveJSON(VOUCHER_KEY, all.filter(function(v){ return v.validTo >= cutoff; }));
+    r.pendingForm = false;
+    saveJSON(LAST_KEY, r);
+  }
+
+  // ---- Sign-up form → Google Sheet ----
+  // Rows wait in an outbox on the phone until the network send goes through.
+  var OUTBOX_KEY = 'hamichee_hunggame_outbox', sending = false;
+  function sendToSheet(p){
+    var box = loadJSON(OUTBOX_KEY, []);
+    box.push(p);
+    saveJSON(OUTBOX_KEY, box);
+    flushOutbox();
+  }
+  function flushOutbox(){
+    if (sending || !CONFIG.sheetUrl || !window.fetch) return;
+    var box = loadJSON(OUTBOX_KEY, []);
+    if (!box.length) return;
+    sending = true;
+    // text/plain + no-cors: a "simple" request Google Apps Script accepts from any site
+    fetch(CONFIG.sheetUrl, { method:'POST', mode:'no-cors', headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+                             body: JSON.stringify(box[0]) })
+      .then(function(){
+        var b = loadJSON(OUTBOX_KEY, []); b.shift(); saveJSON(OUTBOX_KEY, b);
+        sending = false;
+        if (b.length) flushOutbox();
+      })
+      .catch(function(){ sending = false; }); // offline: try again next time the page opens
+  }
+
+  (function buildForm(){
+    var year = new Date().getFullYear(), ys = $('su-year');
+    ys.innerHTML = '<option value="">Chọn</option>';
+    for (var y = year - 6; y >= 1940; y--) ys.insertAdjacentHTML('beforeend', '<option>' + y + '</option>');
+    $('su-place').addEventListener('change', function(){
+      $('su-place-other').hidden = this.value !== 'Tỉnh/thành khác';
+    });
+  })();
+
+  var formResult = null;
+  $('signup-box').addEventListener('submit', function(e){
+    e.preventDefault();
+    var r = formResult;
+    if (!r || !r.pendingForm) return;
+    var name = $('su-name').value.trim().replace(/\s+/g, ' ');
+    var phone = $('su-phone').value.replace(/[\s.\-]/g, '');
+    var place = $('su-place').value === 'Tỉnh/thành khác' ? $('su-place-other').value.trim() : $('su-place').value;
+    var err = '';
+    if (name.length < 2) err = 'Bạn nhập họ tên giúp HAMICHEE nha.';
+    else if (!/^0[35789]\d{8}$/.test(phone)) err = 'Số điện thoại chưa đúng (10 số, bắt đầu bằng 0).';
+    else if (!$('su-year').value) err = 'Bạn chọn năm sinh nha.';
+    else if (!$('su-gender').value) err = 'Bạn chọn giới tính nha.';
+    else if (!place) err = 'Bạn chọn (hoặc nhập) địa phương nha.';
+    else if (!$('su-consent').checked) err = 'Bạn tích ô đồng ý để HAMICHEE lưu thông tin và gửi mã nhé.';
+    $('su-error').textContent = err;
+    if (err) return;
+    sendToSheet({ name:name, phone:phone, birthYear:$('su-year').value, gender:$('su-gender').value,
+                  locality:place, code:r.code, prize:prizeText(r.tier), score:r.score,
+                  cleared:r.cleared || 0, app:r.app || '', playDate:r.date });
+    issueVoucher(r);
+    renderResult(r);
+  });
 
   // ---- Result ----
   function renderResult(r){
@@ -1045,7 +1161,12 @@
     $('result-title').textContent = title;
     $('result-score').textContent = r.score;
     $('result-msg').textContent = msg;
-    var hasCode = !!(r.tier && r.code);
+    // Prize won but form not filled yet: show the form, keep the code hidden.
+    formResult = r;
+    var pending = !!(r.tier && r.code && r.pendingForm);
+    $('signup-box').style.display = pending ? 'flex' : 'none';
+    if (pending) $('su-error').textContent = '';
+    var hasCode = !!(r.tier && r.code) && !pending;
     $('prize-box').style.display = hasCode ? 'flex' : 'none';
     if (hasCode){
       $('result-code').textContent = r.code;
@@ -1160,7 +1281,7 @@
 
   // ---- Startup ----
   if (!storageOk()) show('blocked');
-  else goHome();
+  else { goHome(); flushOutbox(); }
 })();
 </script>
 </body>
