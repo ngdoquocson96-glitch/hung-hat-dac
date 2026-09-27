@@ -704,6 +704,10 @@
   playfield.addEventListener('pointerdown', function(e){
     wakeAudio();
     if (!state || !state.running || dragId !== null) return;
+    // Never capture a tap on the between-levels screen: capturing would steal
+    // the tap from the "Màn tiếp theo" button so it never gets its click.
+    if (state.phase !== 'playing' && state.phase !== 'intro') return;
+    if (e.target.closest && e.target.closest('button, #between, #rescue')) return;
     dragId = e.pointerId; dragStartX = e.clientX; dragStartPlayerX = state.playerX;
     try { playfield.setPointerCapture(dragId); } catch(_){}
   });
