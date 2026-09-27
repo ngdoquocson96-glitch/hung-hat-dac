@@ -257,6 +257,18 @@
   details{ font-size:12px; color:#555; max-width:340px; text-align:left; line-height:1.5; }
   summary{ cursor:pointer; color:var(--green-dark); font-weight:bold; text-align:center; }
   .empty{ color:#666; }
+  .link-btn{ background:none; border:none; color:var(--green-dark); text-decoration:underline; font-size:13.5px; cursor:pointer; padding:6px; }
+  #recover-box{ width:100%; }
+  #recover-form{ display:flex; flex-direction:column; gap:6px; margin-top:8px; background:#fff; border-radius:14px; padding:12px; }
+  #recover-form .rc-help{ margin:0 0 4px; font-size:12.5px; color:#555; }
+  #recover-form label{ font-size:13px; font-weight:bold; color:#444; }
+  #recover-form input, #recover-form select{
+    width:100%; font-size:16px; padding:9px 10px; border:1.5px solid #cdbfa9; border-radius:10px; background:#fffdf9; color:#222;
+    -webkit-user-select:text; user-select:text;
+  }
+  #rc-msg{ font-size:13px; font-weight:bold; color:var(--green-dark); }
+  #rc-msg.err{ color:var(--red); }
+  #rc-submit{ align-self:center; margin-top:4px; }
 
   .center-screen{ align-items:center; justify-content:center; text-align:center; padding:28px; gap:12px; }
   .center-screen h2{ color:var(--green); margin:0; }
@@ -288,6 +300,7 @@
     <h2>Hôm nay bạn đã chơi rồi 🌱</h2>
     <p>Mỗi ngày 1 lượt trên mỗi điện thoại. Hẹn bạn ngày mai ở HAMICHEE nha!</p>
     <button type="button" class="banner js-vouchers" id="locked-banner"></button>
+    <button type="button" class="link-btn js-recover">🔎 Lấy lại mã quà bằng số điện thoại</button>
   </div>
 
   <!-- Home -->
@@ -308,6 +321,7 @@
       🎁 <span id="howto-prizes"></span>
     </div>
     <button type="button" class="btn-main" id="btn-start">Đi cứu Vợ Chè! ▶</button>
+    <button type="button" class="link-btn js-recover">🔎 Lấy lại mã quà bằng số điện thoại</button>
   </div>
 
   <!-- Story (placeholder for the Flow intro clip) -->
@@ -413,6 +427,17 @@
     <div id="v-warn">⚠️ Giờ điện thoại đang lệch — nhân viên kiểm tra ngày trên mã giúp nha</div>
     <div id="voucher-list"></div>
     <div class="v-short">Dùng ở lần ghé sau · 1 mã/hóa đơn · đưa trước khi thanh toán</div>
+    <details id="recover-box"><summary>🔎 Lấy lại mã bằng số điện thoại</summary>
+      <form id="recover-form" novalidate>
+        <p class="rc-help">Đổi máy, đổi ứng dụng hoặc lỡ mất mã? Nhập số điện thoại và năm sinh đã điền khi nhận quà.</p>
+        <label for="rc-phone">Số điện thoại</label>
+        <input id="rc-phone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="13" placeholder="0905 123 456">
+        <label for="rc-year">Năm sinh</label>
+        <select id="rc-year"></select>
+        <div id="rc-msg"></div>
+        <button type="submit" class="btn-soft" id="rc-submit">Tìm mã của tôi</button>
+      </form>
+    </details>
     <details><summary>Điều kiện ưu đãi</summary><div id="terms"></div></details>
     <button type="button" class="btn-soft" id="btn-back">← Quay lại</button>
   </div>
@@ -1136,19 +1161,53 @@
     else if (!$('su-consent').checked) err = 'Bạn tích ô đồng ý để HAMICHEE lưu thông tin và gửi mã nhé.';
     $('su-error').textContent = err;
     if (err) return;
-    sendToSheet({ name:name, phone:phone, birthYear:$('su-year').value, gender:$('su-gender').value,
-                  locality:place, code:r.code, prize:prizeText(r.tier), score:r.score,
-                  cleared:r.cleared || 0, app:r.app || '', playDate:r.date });
-    issueVoucher(r);
-    renderResult(r);
+    var payload = { action:'claim', name:name, phone:phone, birthYear:$('su-year').value, gender:$('su-gender').value,
+                    locality:place, code:r.code, prize:prizeText(r.tier), score:r.score,
+                    cleared:r.cleared || 0, app:r.app || '', playDate:r.date };
+    var btn = $('su-submit');
+    btn.disabled = true; btn.textContent = 'Đang kiểm tra…';
+    // The sheet checks the phone number: 1 prize per number per day, max 3 unused codes per number.
+    callSheet(payload, 8000).then(function(res){
+      btn.disabled = false; btn.textContent = 'Nhận mã quà';
+      if (res && res.ok === false && (res.reason === 'daily' || res.reason === 'cap')){
+        r.pendingForm = false;
+        r.blocked = res.reason;
+        saveJSON(LAST_KEY, r);
+        renderResult(r);
+        return;
+      }
+      if (res && res.ok === false && res.reason === 'phone'){
+        $('su-error').textContent = 'Số điện thoại chưa đúng (10 số, bắt đầu bằng 0).';
+        return;
+      }
+      if (!res) sendToSheet(payload); // no answer (offline / slow): issue anyway and send again later
+      issueVoucher(r);
+      renderResult(r);
+    });
   });
+
+  // POST to the sheet and read its JSON answer; null when offline, slow or unreachable.
+  function callSheet(payload, timeoutMs){
+    if (!CONFIG.sheetUrl || !window.fetch) return Promise.resolve(null);
+    return Promise.race([
+      fetch(CONFIG.sheetUrl, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body:JSON.stringify(payload) })
+        .then(function(res){ return res.json(); }),
+      new Promise(function(resolve){ setTimeout(function(){ resolve(null); }, timeoutMs || 8000); })
+    ]).catch(function(){ return null; });
+  }
 
   // ---- Result ----
   function renderResult(r){
     var win = r.tier === 2 || r.outcome === 'win';
     $('result-img').src = win ? 'assets/vo-che-sprite.png' : 'assets/chong-dac-sprite.png';
     var title, msg;
-    if (r.tier && r.capped){
+    if (r.tier && r.blocked){
+      title = win ? 'Cứu được Vợ Chè! 🏆' : 'Giỏi quá! 🎉';
+      msg = r.blocked === 'daily'
+        ? 'Số điện thoại này đã nhận quà hôm nay rồi — hẹn bạn ngày mai ở HAMICHEE nha!'
+        : 'Số điện thoại này đang giữ đủ 3 mã chưa dùng — ghé HAMICHEE dùng bớt rồi nhận thêm quà nha!';
+    }
+    else if (r.tier && r.capped){
       title = win ? 'Cứu được Vợ Chè! 🏆' : 'Giỏi quá! 🎉';
       msg = 'Bạn đang giữ đủ ' + CONFIG.maxVouchers + ' mã chưa dùng — ghé HAMICHEE dùng bớt rồi nhận thêm quà nha!';
     }
@@ -1163,10 +1222,10 @@
     $('result-msg').textContent = msg;
     // Prize won but form not filled yet: show the form, keep the code hidden.
     formResult = r;
-    var pending = !!(r.tier && r.code && r.pendingForm);
+    var pending = !!(r.tier && r.code && r.pendingForm && !r.blocked);
     $('signup-box').style.display = pending ? 'flex' : 'none';
     if (pending) $('su-error').textContent = '';
-    var hasCode = !!(r.tier && r.code) && !pending;
+    var hasCode = !!(r.tier && r.code) && !pending && !r.blocked;
     $('prize-box').style.display = hasCode ? 'flex' : 'none';
     if (hasCode){
       $('result-code').textContent = r.code;
@@ -1234,24 +1293,71 @@
       btn.classList.add('holding');
       timer = setTimeout(function(){
         btn.classList.remove('holding');
-        // Re-read storage: another tab may already have used this code.
-        var all = loadVouchers();
-        var v = all.filter(function(x){ return x.code === code; })[0];
-        if (v && voucherStatus(v) === 'ok'){
-          v.used = true;
-          v.usedAt = timeStr(new Date(), false);
-          v.usedDate = todayStr();
-          saveJSON(VOUCHER_KEY, all);
-          vibrate(60);
-        }
-        renderVouchers();
-        refreshBanners();
+        btn.disabled = true;
+        btn.querySelector('span').textContent = 'Đang xác nhận…';
+        // Ask the sheet first: a code recovered on another phone may already be used there.
+        callSheet({ action:'use', code:code }, 6000).then(function(res){
+          // Re-read storage: another tab may already have used this code.
+          var all = loadVouchers();
+          var v = all.filter(function(x){ return x.code === code; })[0];
+          if (v && voucherStatus(v) === 'ok'){
+            v.used = true;
+            v.usedAt = res && res.ok === false && res.reason === 'used' ? res.at : timeStr(new Date(), false);
+            v.usedDate = todayStr();
+            saveJSON(VOUCHER_KEY, all);
+            vibrate(60);
+          }
+          if (!res) sendToSheet({ action:'use', code:code }); // offline: tell the sheet later
+          renderVouchers();
+          refreshBanners();
+        });
       }, 3000);
     });
     ['pointerup','pointercancel','pointerleave'].forEach(function(ev){
       btn.addEventListener(ev, function(){ clearTimeout(timer); btn.classList.remove('holding'); });
     });
   }
+
+  // ---- Recover codes by phone number (lost phone, other app, cleared data) ----
+  (function(){
+    var year = new Date().getFullYear(), ys = $('rc-year');
+    ys.innerHTML = '<option value="">Chọn</option>';
+    for (var y = year - 6; y >= 1940; y--) ys.insertAdjacentHTML('beforeend', '<option>' + y + '</option>');
+  })();
+  Array.prototype.forEach.call(document.querySelectorAll('.js-recover'), function(b){
+    b.addEventListener('click', function(){
+      show('vouchers'); renderVouchers();
+      $('recover-box').open = true;
+      $('rc-msg').textContent = ''; $('rc-msg').className = '';
+    });
+  });
+  $('recover-form').addEventListener('submit', function(e){
+    e.preventDefault();
+    var msg = $('rc-msg'), btn = $('rc-submit');
+    var phone = $('rc-phone').value.replace(/[\s.\-]/g, ''), year = $('rc-year').value;
+    msg.className = 'err';
+    if (!/^0[35789]\d{8}$/.test(phone)){ msg.textContent = 'Số điện thoại chưa đúng (10 số, bắt đầu bằng 0).'; return; }
+    if (!year){ msg.textContent = 'Bạn chọn năm sinh nha.'; return; }
+    btn.disabled = true; btn.textContent = 'Đang tìm…'; msg.textContent = '';
+    callSheet({ action:'recover', phone:phone, birthYear:year }, 8000).then(function(res){
+      btn.disabled = false; btn.textContent = 'Tìm mã của tôi';
+      if (!res || !res.ok){ msg.textContent = 'Chưa kết nối được, bạn thử lại sau ít phút nha.'; return; }
+      var all = loadVouchers(), added = 0;
+      (res.codes || []).forEach(function(c){
+        if (!all.some(function(v){ return v.code === c.code; })){
+          all.push({ code:c.code, tier:c.tier, playDate:c.playDate, validFrom:c.validFrom, validTo:c.validTo,
+                     used:false, usedAt:null, usedDate:null });
+          added++;
+        }
+      });
+      saveJSON(VOUCHER_KEY, all);
+      msg.className = '';
+      msg.textContent = !(res.codes || []).length ? 'Không tìm thấy mã còn hạn cho số điện thoại và năm sinh này.'
+        : added ? 'Đã lấy lại ' + added + ' mã! Mã đã hiện ở trên.' : 'Các mã còn hạn của bạn đã có sẵn ở trên rồi.';
+      renderVouchers();
+      refreshBanners();
+    });
+  });
 
   // Live clock + blinking dot make an old screenshot easy to spot.
   // It also re-checks the dates, so a screen left open past midnight updates itself.
