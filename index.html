@@ -35,9 +35,9 @@
   .screen.active{ display:flex; }
   button{ font:inherit; }
 
-  .mini-seed,.mini-rock{ display:inline-block; width:14px; height:14px; vertical-align:-2px; }
+  .howto i.mit,.howto i.nhan,.howto i.thach{ display:inline-block; width:14px; height:14px; vertical-align:-2px; border-width:1.5px; }
+  .mini-seed{ display:inline-block; width:14px; height:14px; vertical-align:-2px; }
   .mini-seed{ border-radius:50%; background:radial-gradient(circle at 35% 30%,#fff,#fbf6e6 55%,#e6cf8f); border:1.5px solid #8a6a22; }
-  .mini-rock{ background:linear-gradient(180deg,#5c5c5c,#2e2e2e); clip-path:polygon(20% 0,80% 5%,100% 55%,75% 100%,15% 95%,0 45%); }
 
   .btn-main{
     background:var(--green); color:#fff; border:none;
@@ -106,16 +106,32 @@
     border:2px solid #8a6a22;
     box-shadow:0 2px 4px rgba(0,0,0,.18);
   }
-  .rock{
-    width:30px; height:30px;
-    background:linear-gradient(180deg,#5c5c5c,#2e2e2e);
-    clip-path:polygon(20% 0,80% 5%,100% 55%,75% 100%,15% 95%,0 45%);
+  /* Decoys: other chè toppings (−1 point) */
+  .mit{   /* múi mít */
+    width:30px; height:30px; border-radius:50% 50% 45% 45% / 60% 60% 40% 40%;
+    background:radial-gradient(circle at 40% 30%, #ffe08a, #f5b82e 60%, #d98e12);
+    border:2px solid #b8740c;
   }
+  .nhan{  /* trái nhãn */
+    width:30px; height:30px; border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #f1d3a3, #c89455 55%, #8f6230);
+    border:2px solid #6f4a22;
+  }
+  .thach{ /* thạch lá dứa */
+    width:30px; height:30px; border-radius:7px;
+    background:linear-gradient(135deg, rgba(190,240,170,.95), rgba(90,190,90,.9));
+    border:2px solid #3f8f3f;
+    box-shadow:inset 3px 3px 0 rgba(255,255,255,.55);
+  }
+  /* Bomb: −3 points and one life */
+  .bomb{ width:30px; height:30px; font-size:28px; line-height:30px; text-align:center; }
+  .bomb::before{ content:'💣'; }
   .pop{
     position:absolute; top:0; left:0; z-index:6; pointer-events:none;
     color:var(--orange); font-weight:bold; font-size:20px; text-shadow:0 1px 0 #fff;
     animation:pop .5s ease-out forwards;
   }
+  .pop.minus{ color:var(--red); }
   @keyframes pop{ from{opacity:1; margin-top:0;} to{opacity:0; margin-top:-30px;} }
   #flash{ position:absolute; inset:0; background:var(--red); opacity:0; pointer-events:none; z-index:7; transition:opacity .15s; }
   #flash.on{ opacity:.25; }
@@ -234,7 +250,8 @@
     </div>
     <div class="howto">
       👆 <b>Kéo ngang</b> để di chuyển nhân vật<br>
-      <i class="mini-seed"></i> Hạt đác <b>+1</b> &nbsp;·&nbsp; <i class="mini-rock"></i> Đá <b>mất 1 tim</b><br>
+      <i class="mini-seed"></i> Chỉ hứng <b>hạt đác +1</b><br>
+      <i class="mit"></i> <i class="nhan"></i> <i class="thach"></i> Mít, nhãn, thạch <b>−2</b> &nbsp;·&nbsp; 💣 Bom <b>−3 và mất 1 tim</b><br>
       🎁 <span id="howto-prizes"></span>
     </div>
     <button type="button" class="btn-main" id="btn-start" disabled>Chọn nhân vật trước nha</button>
@@ -591,9 +608,24 @@
   function scheduleSpawn(){
     if (!state || !state.active) return;
     var elapsed = CONFIG.gameTime - state.timeLeft;
-    var isRock = Math.random() < 0.2 + elapsed*0.006; // 20% → ~38% rocks
-    spawnAt(isRock ? 'rock' : 'seed', Math.random() * (state.fieldW - ITEM), -40);
-    spawnTimeoutId = setTimeout(scheduleSpawn, Math.max(320, 850 - elapsed*18));
+    var type = pickType(elapsed), x = Math.random() * (state.fieldW - ITEM);
+    spawnAt(type, x, -40);
+    // Often a topping or bomb falls right next to a seed, so blindly chasing seeds gets punished.
+    if (type === 'seed' && Math.random() < 0.25 + elapsed*0.008){
+      var side = x < ITEM*2 ? 1 : (x > state.fieldW - ITEM*3 ? -1 : (Math.random() < 0.5 ? -1 : 1));
+      var cx = Math.max(0, Math.min(state.fieldW - ITEM, x + side * (42 + Math.random()*18)));
+      spawnAt(Math.random() < 0.3 ? 'bomb' : DECOYS[Math.floor(Math.random()*DECOYS.length)], cx, -40 - Math.random()*40);
+    }
+    spawnTimeoutId = setTimeout(scheduleSpawn, Math.max(260, 700 - elapsed*16));
+  }
+
+  // Share of things to avoid grows from 30% to ~57% over the round;
+  // about a third of them are bombs, the rest are decoy toppings.
+  var DECOYS = ['mit', 'nhan', 'thach'];
+  function pickType(elapsed){
+    if (Math.random() >= 0.30 + elapsed*0.009) return 'seed';
+    if (Math.random() < 0.33) return 'bomb';
+    return DECOYS[Math.floor(Math.random() * DECOYS.length)];
   }
 
   function spawnAt(type, x, y){
@@ -614,7 +646,7 @@
     if (state.timeLeft <= 0){ state.timeLeft = 0; updateHud(); endGame(); return; }
 
     var elapsed = CONFIG.gameTime - state.timeLeft;
-    var step = (185 + elapsed * 6) * dt; // px this tick, faster over time
+    var step = (210 + elapsed * 8) * dt; // px this tick, faster over time
 
     // catch zone = upper 60% of the character (head/hands), not the feet
     var top = state.playerTop, bottom = state.playerTop + PLAYER_H * 0.6;
@@ -626,7 +658,9 @@
       it.el.style.transform = 'translate(' + it.x + 'px,' + it.y + 'px)';
       if (it.y + ITEM > top && it.y < bottom && it.x + ITEM > left && it.x < right){
         removeItem(i);
-        if (it.type === 'seed') catchSeed(it); else hitRock();
+        if (it.type === 'seed') catchSeed(it);
+        else if (it.type === 'bomb') hitBomb(it);
+        else catchDecoy(it);
         if (!state.running) return;
       } else if (it.y > state.fieldH){
         removeItem(i);
@@ -645,26 +679,40 @@
     state.items = [];
   }
 
-  function catchSeed(it){
-    state.score += 1;
-    beep(880, 60, 'sine', 0.08);
+  function popText(it, text, minus){
     var p = document.createElement('div');
-    p.className = 'pop'; p.textContent = '+1';
+    p.className = 'pop' + (minus ? ' minus' : ''); p.textContent = text;
     p.style.transform = 'translate(' + it.x + 'px,' + (state.playerTop - 24) + 'px)';
     playfield.appendChild(p);
     setTimeout(function(){ if (p.parentNode) p.parentNode.removeChild(p); }, 520);
+  }
+
+  function catchSeed(it){
+    state.score += 1;
+    beep(880, 60, 'sine', 0.08);
+    popText(it, '+1', false);
     player.classList.add('squash');
     setTimeout(function(){ player.classList.remove('squash'); }, 100);
   }
 
-  function hitRock(){
+  function catchDecoy(it){
+    state.score = Math.max(0, state.score - 2);
+    beep(260, 120, 'sawtooth', 0.05);
+    vibrate(40);
+    popText(it, '−2', true);
+  }
+
+  function hitBomb(it){
+    state.score = Math.max(0, state.score - 3);
     state.lives -= 1;
+    popText(it, '−3', true);
     beep(150, 180, 'square', 0.07);
     vibrate(120);
     var g = screens.game;
     g.classList.remove('shake'); void g.offsetWidth; g.classList.add('shake');
     flashEl.classList.add('on');
     setTimeout(function(){ flashEl.classList.remove('on'); }, 150);
+    updateHud(); // show the lost heart (and score) even when this ends the game
     if (state.lives <= 0){ state.endedByLives = true; endGame(); }
   }
 
