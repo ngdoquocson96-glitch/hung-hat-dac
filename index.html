@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>HAMICHEE — Hứng Hạt Đác</title>
+<style>
+  :root{
+    --green:#00783E;
+    --green-dark:#00542b;
+    --orange:#FAA627;
+    --yellow:#FFCC4E;
+    --cream:#F1E5D6;
+    --red:#d93a3a;
+  }
+  *{box-sizing:border-box;}
+  html{ touch-action:manipulation; } /* stops iOS double-tap zoom */
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:var(--cream);
+    font-family:'Segoe UI', Roboto, Arial, sans-serif;
+    overflow:hidden;
+    -webkit-user-select:none; user-select:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  #app{
+    position:relative; width:100%; max-width:480px; margin:0 auto;
+    height:100vh; height:100dvh; /* dvh = visible height, excludes the browser toolbar */
+    padding-bottom:env(safe-area-inset-bottom);
+    background:var(--cream);
+    overflow:hidden;
+    display:flex; flex-direction:column;
+  }
+  .screen{ display:none; flex:1; flex-direction:column; min-height:0; }
+  .screen.active{ display:flex; }
+  button{ font:inherit; }
+
+  .mini-seed,.mini-rock{ display:inline-block; width:14px; height:14px; vertical-align:-2px; }
+  .mini-seed{ border-radius:50%; background:radial-gradient(circle at 35% 30%,#fff,#fbf6e6 55%,#e6cf8f); border:1.5px solid #8a6a22; }
+  .mini-rock{ background:linear-gradient(180deg,#5c5c5c,#2e2e2e); clip-path:polygon(20% 0,80% 5%,100% 55%,75% 100%,15% 95%,0 45%); }
+
+  .btn-main{
+    background:var(--green); color:#fff; border:none;
+    padding:14px 36px; border-radius:30px; font-size:17px; font-weight:bold;
+    box-shadow:0 4px 0 var(--green-dark); cursor:pointer;
+  }
+  .btn-main:disabled{ background:#bbb; box-shadow:0 4px 0 #999; cursor:not-allowed; }
+  .btn-main:active:not(:disabled){ transform:translateY(3px); box-shadow:0 1px 0 var(--green-dark); }
+  .btn-soft{
+    background:#fff; color:var(--green-dark); border:2px solid var(--green);
+    padding:9px 18px; border-radius:22px; font-size:14px; font-weight:bold; cursor:pointer;
+  }
+  .banner{
+    display:none; background:var(--yellow); color:var(--green-dark); border:none;
+    padding:10px 16px; border-radius:14px; font-size:14px; font-weight:bold; cursor:pointer;
+  }
+
+  /* ---- Select screen ---- */
+  #screen-select{ align-items:center; justify-content:flex-start; padding:28px 20px 20px; text-align:center; gap:12px; overflow-y:auto; }
+  #screen-select h1{ color:var(--green); font-size:22px; margin:0; }
+  .sub{ color:#555; margin:0; font-size:14px; }
+  .cards{ display:flex; gap:14px; margin-top:4px; }
+  .card{
+    width:136px; border:4px solid var(--green); border-radius:20px;
+    background:#fff; padding:8px; cursor:pointer; transition:transform .15s; color:inherit;
+  }
+  .card img{ width:100%; height:150px; object-fit:contain; border-radius:12px; display:block; background:var(--cream); }
+  .card span{ display:block; margin-top:6px; font-weight:bold; color:var(--green-dark); font-size:14px; }
+  .card[aria-pressed="true"]{ transform:scale(1.06); box-shadow:0 0 0 4px var(--orange); }
+  .howto{ background:#fff; border-radius:14px; padding:10px 16px; font-size:13.5px; color:#333; line-height:1.7; max-width:340px; }
+  .howto b{ color:var(--green-dark); }
+
+  /* ---- Game screen ---- */
+  #screen-game{ position:relative; touch-action:none; }
+  #screen-game.shake{ animation:shake .25s; }
+  @keyframes shake{ 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+  #hud{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:10px 14px; font-weight:bold; color:var(--green-dark); font-size:17px;
+  }
+  #timer{ color:var(--orange); min-width:48px; text-align:center; }
+  #timer.hurry{ color:var(--red); animation:pulse .5s infinite alternate; }
+  @keyframes pulse{ to{ transform:scale(1.25); } }
+  #score .mini-seed{ width:16px; height:16px; margin-right:4px; }
+  #playfield{
+    position:relative; flex:1; overflow:hidden; touch-action:none;
+    background:linear-gradient(#E4F2E8, var(--cream) 72%);
+  }
+  #player{
+    position:absolute; bottom:8px; left:0; width:72px; height:114px; object-fit:contain; z-index:4;
+    pointer-events:none; -webkit-touch-callout:none; -webkit-user-drag:none;
+    /* fade the left/right edges of the cream JPG so it does not look like a pasted box */
+    -webkit-mask-image:linear-gradient(to right,transparent,#000 10%,#000 90%,transparent);
+    mask-image:linear-gradient(to right,transparent,#000 10%,#000 90%,transparent);
+    transition:transform .1s;
+  }
+  #player.squash{ transform:scale(1.1,.9); }
+  #shadow{
+    position:absolute; bottom:4px; left:0; width:72px; height:10px; border-radius:50%;
+    background:rgba(0,0,0,.15); z-index:3; pointer-events:none;
+  }
+  .falling{ position:absolute; top:0; left:0; will-change:transform; pointer-events:none; }
+  .seed{
+    width:30px; height:30px; border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #ffffff, #fbf6e6 55%, #e6cf8f);
+    border:2px solid #8a6a22;
+    box-shadow:0 2px 4px rgba(0,0,0,.18);
+  }
+  .rock{
+    width:30px; height:30px;
+    background:linear-gradient(180deg,#5c5c5c,#2e2e2e);
+    clip-path:polygon(20% 0,80% 5%,100% 55%,75% 100%,15% 95%,0 45%);
+  }
+  .pop{
+    position:absolute; top:0; left:0; z-index:6; pointer-events:none;
+    color:var(--orange); font-weight:bold; font-size:20px; text-shadow:0 1px 0 #fff;
+    animation:pop .5s ease-out forwards;
+  }
+  @keyframes pop{ from{opacity:1; margin-top:0;} to{opacity:0; margin-top:-30px;} }
+  #flash{ position:absolute; inset:0; background:var(--red); opacity:0; pointer-events:none; z-index:7; transition:opacity .15s; }
+  #flash.on{ opacity:.25; }
+  #countdown{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:64px; font-weight:bold; color:var(--green); z-index:8; pointer-events:none;
+    text-shadow:0 3px 0 #fff;
+  }
+  #drag-hint{
+    position:absolute; left:0; right:0; top:62%; text-align:center; z-index:8; pointer-events:none;
+    font-size:16px; font-weight:bold; color:var(--green-dark); display:none;
+  }
+
+  /* ---- Result screen ---- */
+  #screen-result{ align-items:center; justify-content:flex-start; text-align:center; padding:18px 20px 16px; gap:6px; overflow-y:auto; }
+  #result-title{ color:var(--green); margin:0; font-size:24px; }
+  #result-img{
+    width:56px; height:80px; object-fit:contain;
+    -webkit-mask-image:linear-gradient(to right,transparent,#000 12%,#000 88%,transparent);
+    mask-image:linear-gradient(to right,transparent,#000 12%,#000 88%,transparent);
+  }
+  .caught{ color:#666; font-size:14px; }
+  .score-line{ font-size:20px; font-weight:bold; color:var(--green-dark); }
+  #result-score{ font-size:44px; color:var(--orange); }
+  #result-msg{ font-size:15.5px; color:#333; max-width:330px; }
+  #prize-box{ display:none; flex-direction:column; align-items:center; gap:6px; margin-top:4px; }
+  .code{
+    background:#fff; border:3px dashed var(--green); border-radius:14px;
+    padding:10px 22px; font-size:30px; font-weight:bold; letter-spacing:3px; color:var(--green-dark);
+  }
+  #prize-range{ font-size:16px; font-weight:bold; color:var(--orange); }
+  #prize-cond{ font-size:12.5px; color:#555; }
+  .code.small{ font-size:22px; padding:6px 16px; border-width:2px; }
+  #zalo-btn{ display:none; text-decoration:none; }
+  #v-warn{ display:none; color:var(--red); font-size:13px; font-weight:bold; max-width:320px; }
+  #prize-note{ font-size:12.5px; color:#555; max-width:320px; line-height:1.45; }
+  .brag{ font-size:13px; color:#666; margin-top:6px; }
+  .brand{ font-size:12.5px; color:var(--green); font-weight:bold; }
+
+  /* ---- Vouchers screen ---- */
+  #screen-vouchers{ align-items:center; justify-content:flex-start; text-align:center; padding:18px 18px 16px; gap:10px; overflow-y:auto; }
+  #screen-vouchers h2{ color:var(--green); margin:0; font-size:22px; }
+  #v-clock{ font-size:14px; color:var(--green-dark); font-weight:bold; }
+  .live-dot{
+    display:inline-block; width:9px; height:9px; border-radius:50%; background:var(--red);
+    margin-right:6px; animation:blink 1s infinite;
+  }
+  @keyframes blink{ 50%{ opacity:.2; } }
+  #voucher-list{ display:flex; flex-direction:column; gap:10px; width:100%; max-width:340px; }
+  .voucher{ background:#fff; border-radius:16px; padding:12px 14px 10px; display:flex; flex-direction:column; align-items:center; gap:4px; border:2px solid #e3d6c3; }
+  .voucher.ok{ border-color:var(--green); }
+  .voucher.used{ opacity:.7; }
+  .voucher.used .code{ text-decoration:line-through; opacity:.5; }
+  .v-prize{ font-weight:bold; color:#333; font-size:14.5px; }
+  .v-range{ font-size:12.5px; color:#666; }
+  .v-status{ font-size:15px; font-weight:bold; color:var(--orange); }
+  .voucher.ok .v-status{ color:var(--green); }
+  .voucher.used .v-status{ color:var(--red); }
+  .staff-btn{
+    position:relative; overflow:hidden; margin-top:6px; width:100%;
+    border:none; border-top:1px dashed #ccc; background:none; color:#999;
+    padding:8px 4px 2px; font-size:11.5px; cursor:pointer; touch-action:none;
+  }
+  .staff-btn::before{
+    content:''; position:absolute; left:0; top:0; bottom:0; width:0; background:var(--yellow); opacity:.6; z-index:0;
+  }
+  .staff-btn.holding::before{ width:100%; transition:width 3s linear; }
+  .staff-btn span{ position:relative; z-index:1; }
+  .v-short{ font-size:12.5px; color:#555; }
+  details{ font-size:12px; color:#555; max-width:340px; text-align:left; line-height:1.5; }
+  summary{ cursor:pointer; color:var(--green-dark); font-weight:bold; text-align:center; }
+  .empty{ color:#666; }
+
+  .center-screen{ align-items:center; justify-content:center; text-align:center; padding:28px; gap:12px; }
+  .center-screen h2{ color:var(--green); margin:0; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Browser blocks storage (private mode / cookies blocked) -->
+  <div id="screen-blocked" class="screen center-screen">
+    <h2>Chưa chơi được trên trình duyệt này 🙏</h2>
+    <p>Trình duyệt đang chặn lưu dữ liệu (chế độ ẩn danh hoặc chặn cookie), nên không giữ được mã quà cho bạn.
+       Bạn mở link bằng trình duyệt bình thường giúp HAMICHEE nha!</p>
+  </div>
+
+  <!-- Phone clock is wrong (checked against the web server time) -->
+  <div id="screen-clock" class="screen center-screen">
+    <h2>Giờ trên điện thoại chưa đúng ⏰</h2>
+    <p>Bạn bật “Đặt ngày giờ tự động” trong Cài đặt điện thoại rồi bấm thử lại nha!</p>
+    <button type="button" class="btn-soft" id="btn-clock-retry">Thử lại</button>
+  </div>
+
+  <!-- Already played today -->
+  <div id="screen-locked" class="screen center-screen">
+    <h2>Hôm nay bạn đã chơi rồi 🌱</h2>
+    <p>Mỗi ngày 1 lượt trên mỗi điện thoại. Hẹn bạn ngày mai ở HAMICHEE nha!</p>
+    <button type="button" class="banner js-vouchers" id="locked-banner"></button>
+  </div>
+
+  <!-- Character select -->
+  <div id="screen-select" class="screen">
+    <h1>HAMICHEE — Hứng Hạt Đác</h1>
+    <button type="button" class="banner js-vouchers" id="select-banner"></button>
+    <p class="sub">Chọn nhân vật rồi hứng thật nhiều hạt đác trong 30 giây nhé!</p>
+    <div class="cards">
+      <button type="button" class="card" data-char="chong-dac" aria-pressed="false">
+        <img src="assets/chong-dac-sprite.png" alt="">
+        <span>Chồng Đác</span>
+      </button>
+      <button type="button" class="card" data-char="vo-che" aria-pressed="false">
+        <img src="assets/vo-che-sprite.png" alt="">
+        <span>Vợ Chè</span>
+      </button>
+    </div>
+    <div class="howto">
+      👆 <b>Kéo ngang</b> để di chuyển nhân vật<br>
+      <i class="mini-seed"></i> Hạt đác <b>+1</b> &nbsp;·&nbsp; <i class="mini-rock"></i> Đá <b>mất 1 tim</b><br>
+      🎁 <span id="howto-prizes"></span>
+    </div>
+    <button type="button" class="btn-main" id="btn-start" disabled>Chọn nhân vật trước nha</button>
+  </div>
+
+  <!-- Gameplay -->
+  <div id="screen-game" class="screen">
+    <div id="hud">
+      <div id="hearts"></div>
+      <div id="timer"></div>
+      <div id="score"></div>
+    </div>
+    <div id="playfield">
+      <div id="shadow"></div>
+      <img id="player" alt="" draggable="false">
+      <div id="countdown"></div>
+      <div id="drag-hint">👈 Kéo thử đi 👉</div>
+      <div id="flash"></div>
+    </div>
+  </div>
+
+  <!-- Result (right after playing, and again if reopened the same day) -->
+  <div id="screen-result" class="screen">
+    <h2 id="result-title"></h2>
+    <img id="result-img" alt="">
+    <div class="caught">Bạn hứng được</div>
+    <div class="score-line"><span id="result-score">0</span> hạt đác</div>
+    <div id="result-msg"></div>
+    <div id="prize-box">
+      <div id="prize-range"></div>
+      <div id="prize-cond"></div>
+      <div class="code small" id="result-code"></div>
+      <div id="prize-note"></div>
+    </div>
+    <button type="button" class="btn-soft js-vouchers" id="result-vouchers">🎁 Mã ưu đãi của tôi</button>
+    <a class="btn-soft" id="zalo-btn" href="#" target="_blank" rel="noopener">💬 Quan tâm Zalo HAMICHEE để được nhắc mã</a>
+    <div class="brag" id="brag"></div>
+    <div class="brand">HAMICHEE · Chè hạt đác Khánh Hòa · vị nhà mát lành</div>
+  </div>
+
+  <!-- My vouchers (what the cashier looks at) -->
+  <div id="screen-vouchers" class="screen">
+    <h2>Mã ưu đãi của bạn 🎁</h2>
+    <div id="v-clock"><span class="live-dot"></span><span id="v-clock-text"></span></div>
+    <div id="v-warn">⚠️ Giờ điện thoại đang lệch — nhân viên kiểm tra ngày trên mã giúp nha</div>
+    <div id="voucher-list"></div>
+    <div class="v-short">Dùng ở lần ghé sau · 1 mã/hóa đơn · đưa trước khi thanh toán</div>
+    <details><summary>Điều kiện ưu đãi</summary><div id="terms"></div></details>
+    <button type="button" class="btn-soft" id="btn-back">← Quay lại</button>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  // ===== CẤU HÌNH — chủ quán chỉnh các con số / câu chữ ở đây =====
+  var CONFIG = {
+    gameTime: 30,        // giây mỗi lượt
+    toppingAt: 15,       // từ bao nhiêu hạt thì tặng topping
+    discountAt: 28,      // từ bao nhiêu hạt thì giảm giá
+    validDays: 6,        // mã dùng từ ngày hôm sau đến hết N ngày kể từ ngày chơi (≤6: iPhone có thể tự xóa dữ liệu sau 7 ngày)
+    maxVouchers: 3,      // tối đa bao nhiêu mã chưa dùng trên 1 máy
+    zaloOA: '',          // link "Quan tâm" Zalo OA của quán, vd 'https://zalo.me/xxxxxxxxxxxx' — để trống thì ẩn nút
+    toppingShort: 'tặng 1 topping',
+    discountShort: 'giảm 10%',
+    toppingText: 'Tặng 1 topping bất kỳ',
+    discountText: 'Giảm 10% hóa đơn',
+    discountTerms: 'tối đa 10.000đ, hóa đơn từ 40.000đ',
+    shop: 'HAMICHEE 41 Hoàng Hoa Thám'
+  };
+
+  var LOCK_KEY = 'hamichee_hunggame_last_play';      // "YYYY-MM-DD" of the last play
+  var LAST_KEY = 'hamichee_hunggame_last_result';    // last game result (re-shown the same day)
+  var VOUCHER_KEY = 'hamichee_hunggame_vouchers';    // list of prize codes for next visits
+  var PLAYER_W = 72, PLAYER_H = 114, ITEM = 30;
+  var WEEKDAYS = ['Chủ nhật','Thứ hai','Thứ ba','Thứ tư','Thứ năm','Thứ sáu','Thứ bảy'];
+
+  // ---- Dates (local calendar, not UTC) ----
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function iso(d){ return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
+  function todayStr(){ return iso(new Date()); }
+  function addDays(isoDate, n){ var p = isoDate.split('-'); return iso(new Date(+p[0], +p[1]-1, +p[2] + n)); }
+  function dm(isoDate){ var p = isoDate.split('-'); return p[2] + '/' + p[1]; }
+  function dmy(isoDate){ var p = isoDate.split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
+  function timeStr(d, withSeconds){ return pad(d.getHours()) + ':' + pad(d.getMinutes()) + (withSeconds ? ':' + pad(d.getSeconds()) : ''); }
+
+  // ---- Storage ----
+  function storageOk(){
+    try {
+      localStorage.setItem('hamichee_probe', '1');
+      var ok = localStorage.getItem('hamichee_probe') === '1';
+      localStorage.removeItem('hamichee_probe');
+      return ok;
+    } catch(e){ return false; }
+  }
+  function load(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
+  function store(k, v){ try { localStorage.setItem(k, v); } catch(e){} }
+  function loadJSON(k, fallback){ try { var v = JSON.parse(load(k)); return v == null ? fallback : v; } catch(e){ return fallback; } }
+  function saveJSON(k, v){ store(k, JSON.stringify(v)); }
+  function loadVouchers(){ var v = loadJSON(VOUCHER_KEY, []); return Array.isArray(v) ? v : []; }
+
+  function voucherStatus(v){
+    if (!v || !v.code || !v.validFrom || !v.validTo) return 'expired'; // broken entry is never usable
+    var t = todayStr();
+    if (v.used) return 'used';
+    if (t > v.validTo) return 'expired';
+    if (t < v.validFrom) return 'soon';
+    return 'ok';
+  }
+  function activeVouchers(){
+    return loadVouchers().filter(function(v){ var s = voucherStatus(v); return s === 'ok' || s === 'soon'; });
+  }
+  function prizeText(tier){
+    return tier === 2 ? CONFIG.discountText + ' (' + CONFIG.discountTerms + ')' : CONFIG.toppingText;
+  }
+
+  function $(id){ return document.getElementById(id); }
+  var screens = {
+    blocked:$('screen-blocked'), clock:$('screen-clock'), locked:$('screen-locked'), select:$('screen-select'),
+    game:$('screen-game'), result:$('screen-result'), vouchers:$('screen-vouchers')
+  };
+  function show(name){
+    for (var k in screens) screens[k].classList.remove('active');
+    screens[name].classList.add('active');
+  }
+  function isShown(name){ return screens[name].classList.contains('active'); }
+  function spriteSrc(c){ return c === 'vo-che' ? 'assets/vo-che-sprite.png' : 'assets/chong-dac-sprite.png'; }
+
+  // Which app the QR was opened in: each app keeps its own storage, so the
+  // customer must come back through the same app to see their codes.
+  function appName(){
+    var ua = navigator.userAgent || '';
+    if (/Zalo/i.test(ua)) return 'Zalo';
+    if (/Messenger/i.test(ua)) return 'Messenger';
+    if (/FBAN|FBAV|FB_IAB/i.test(ua)) return 'Facebook';
+    if (/Instagram/i.test(ua)) return 'Instagram';
+    if (/TikTok|musical_ly|BytedanceWebview/i.test(ua)) return 'TikTok';
+    return 'Camera điện thoại';
+  }
+
+  // Phone clock check against the web server's Date header, so changing the
+  // phone's date cannot turn a next-visit code into a same-day one.
+  var clockState = 'unknown'; // 'ok' | 'bad' | 'unknown' (offline / opened as a file)
+  function checkClock(){
+    if (!/^https?:$/.test(location.protocol) || !window.fetch) return Promise.resolve();
+    return fetch(location.href, { method:'HEAD', cache:'no-store' }).then(function(res){
+      var server = Date.parse(res.headers.get('Date') || '');
+      if (isNaN(server)) return;
+      clockState = Math.abs(server - Date.now()) > 10*60*1000 ? 'bad' : 'ok';
+    }).catch(function(){});
+  }
+  var clockCheck = checkClock();
+
+  $('howto-prizes').textContent = CONFIG.toppingAt + ' hạt: ' + CONFIG.toppingShort + ' · ' +
+    CONFIG.discountAt + ' hạt: ' + CONFIG.discountShort + ' (' + CONFIG.discountTerms + ') · dùng ở lần ghé sau';
+  $('terms').textContent = 'Mã không dùng trong ngày chơi; dùng ở lần ghé sau tại ' + CONFIG.shop +
+    ', từ ngày hôm sau đến hết ' + CONFIG.validDays + ' ngày kể từ ngày chơi. Đưa mã cho nhân viên trước khi thanh toán. ' +
+    'Mỗi hóa đơn/bàn 1 mã, không cộng dồn, không quy đổi tiền mặt. Ưu đãi giảm giá: ' + CONFIG.discountTerms + '. ' +
+    'Mỗi mã chỉ dùng 1 lần — quán ghi lại mã đã dùng. Lỡ mất mã trên điện thoại? Đưa ảnh chụp màn hình kết quả cho nhân viên.';
+
+  // ---- Where to land: select, today's result, or "already played" ----
+  function refreshBanners(){
+    var n = activeVouchers().length;
+    ['select-banner','locked-banner'].forEach(function(id){
+      var b = $(id);
+      b.style.display = n ? 'inline-block' : 'none';
+      b.textContent = n >= CONFIG.maxVouchers
+        ? '🎁 Bạn đang có ' + n + ' mã (tối đa) — dùng bớt để nhận thêm quà'
+        : '🎁 Bạn đang có ' + n + ' mã ưu đãi — bấm để xem';
+    });
+    $('result-vouchers').style.display = n ? '' : 'none';
+  }
+  function goHome(){
+    var t = todayStr();
+    refreshBanners();
+    if (load(LOCK_KEY) === t){
+      var last = loadJSON(LAST_KEY, null);
+      if (last && last.date === t) renderResult(last); else show('locked');
+    } else {
+      show('select');
+    }
+  }
+
+  // ---- Sound (WebAudio, created on the Start tap so mobile browsers allow it) ----
+  var audio = null;
+  function wakeAudio(){
+    if (audio && audio.state !== 'running'){
+      try { var p = audio.resume(); if (p && p.catch) p.catch(function(){}); } catch(e){}
+    }
+  }
+  function initAudio(){
+    try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); } catch(e){ audio = null; }
+    wakeAudio();
+  }
+  function beep(freq, ms, type, vol){
+    if (!audio) return;
+    try {
+      var o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime;
+      o.type = type || 'sine'; o.frequency.value = freq;
+      g.gain.setValueAtTime(vol || 0.08, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + ms/1000);
+      o.connect(g); g.connect(audio.destination);
+      o.start(t); o.stop(t + ms/1000);
+    } catch(e){}
+  }
+  function vibrate(ms){ try { if (navigator.vibrate) navigator.vibrate(ms); } catch(e){} }
+
+  // ---- Character select ----
+  var selectedChar = null;
+  var cards = document.querySelectorAll('.card');
+  var btnStart = $('btn-start');
+  Array.prototype.forEach.call(cards, function(card){
+    card.addEventListener('click', function(){
+      Array.prototype.forEach.call(cards, function(c){ c.setAttribute('aria-pressed','false'); });
+      card.setAttribute('aria-pressed','true');
+      selectedChar = card.getAttribute('data-char');
+      btnStart.disabled = false;
+      btnStart.textContent = 'Bắt đầu hứng!';
+    });
+  });
+
+  var starting = false;
+  btnStart.addEventListener('click', function(){
+    if (!selectedChar || starting) return;
+    starting = true;
+    initAudio(); // must run inside the tap, before waiting
+    // Wait for the clock check (normally already done), at most 2.5s.
+    Promise.race([clockCheck, new Promise(function(r){ setTimeout(r, 2500); })]).then(function(){
+      starting = false;
+      if (clockState === 'bad'){ show('clock'); return; }
+      if (load(LOCK_KEY) === todayStr()){ goHome(); return; } // another tab played meanwhile
+      // Lock as soon as a play starts: reloading mid-game gives no free retry.
+      store(LOCK_KEY, todayStr());
+      startGame();
+    });
+  });
+
+  $('btn-clock-retry').addEventListener('click', function(){
+    clockCheck = checkClock();
+    clockCheck.then(function(){ if (clockState !== 'bad') goHome(); });
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll('.js-vouchers'), function(b){
+    // show first: the clock only ticks while the screen is visible
+    b.addEventListener('click', function(){ show('vouchers'); renderVouchers(); });
+  });
+  $('btn-back').addEventListener('click', goHome);
+
+  // ---- Game ----
+  var playfield = $('playfield'), player = $('player'), shadow = $('shadow');
+  var heartsEl = $('hearts'), timerEl = $('timer'), scoreEl = $('score');
+  var countdownEl = $('countdown'), dragHint = $('drag-hint'), flashEl = $('flash');
+  var state = null, loopId = null, spawnTimeoutId = null, lastTick = 0;
+
+  function positionPlayer(){
+    player.style.left = state.playerX + 'px';
+    shadow.style.left = state.playerX + 'px';
+  }
+
+  // Re-measured on start and on every resize/rotation.
+  function measure(){
+    state.fieldW = playfield.clientWidth;
+    state.fieldH = playfield.clientHeight;
+    state.playerTop = player.offsetTop; // top of the character inside the playfield
+    state.playerX = Math.max(0, Math.min(state.fieldW - PLAYER_W, state.playerX));
+    positionPlayer();
+  }
+
+  function startGame(){
+    player.src = spriteSrc(selectedChar);
+    show('game'); // must be visible before measuring
+    state = {
+      score:0, lives:3, timeLeft:CONFIG.gameTime, playerX:0, items:[],
+      running:true, active:false, countdown:true, firstStart:true,
+      endedByLives:false, char:selectedChar, hud:'',
+      playDate:todayStr() // fixed at start: a game crossing midnight must not earn a second play
+    };
+    state.playerX = playfield.clientWidth/2 - PLAYER_W/2;
+    measure();
+    updateHud();
+    dragHint.style.display = 'block';
+    runCountdown(['3','2','1','Hứng nào!'], 0);
+  }
+
+  function runCountdown(steps, i){
+    if (!state || !state.running) return;
+    if (i >= steps.length){
+      countdownEl.textContent = '';
+      state.countdown = false;
+      if (!document.hidden) resume();
+      return;
+    }
+    countdownEl.textContent = steps[i];
+    var last = i === steps.length - 1;
+    beep(last ? 880 : 520, 120, 'triangle', 0.06);
+    setTimeout(function(){ runCountdown(steps, i+1); }, last ? 500 : 700);
+  }
+
+  // Everything stops while the page is hidden (customer switches app), and
+  // time is counted from real elapsed time inside the loop, so switching
+  // away and back can neither steal nor add seconds.
+  function resume(){
+    if (!state || !state.running || state.active || state.countdown) return;
+    state.active = true;
+    if (state.firstStart){
+      // Two seeds already on the way, so the first seconds are not empty.
+      state.firstStart = false;
+      var cx = state.fieldW/2 - ITEM/2;
+      spawnAt('seed', cx - 60, state.playerTop * 0.35);
+      spawnAt('seed', cx + 50, state.playerTop * 0.1);
+    }
+    lastTick = performance.now();
+    spawnTimeoutId = setTimeout(scheduleSpawn, 400);
+    loopId = setInterval(loop, 16);
+  }
+  function pause(){
+    if (!state || !state.running || !state.active) return;
+    state.active = false;
+    dragId = null; // the browser may never send pointerup for a finger held during an app switch
+    clearTimeout(spawnTimeoutId);
+    clearInterval(loopId);
+  }
+  document.addEventListener('visibilitychange', function(){
+    if (document.hidden){ pause(); }
+    else {
+      wakeAudio();
+      resume();
+      if (!state || !state.running) clockCheck = checkClock(); // customer may have fixed the phone clock
+      checkDay();
+    }
+  });
+  window.addEventListener('resize', function(){ if (state && state.running) measure(); });
+
+  // Relative drag: the finger can be anywhere, the character stays visible.
+  var dragId = null, dragStartX = 0, dragStartPlayerX = 0;
+  playfield.addEventListener('pointerdown', function(e){
+    wakeAudio();
+    if (!state || !state.running || dragId !== null) return;
+    dragId = e.pointerId; dragStartX = e.clientX; dragStartPlayerX = state.playerX;
+    try { playfield.setPointerCapture(dragId); } catch(_){}
+  });
+  playfield.addEventListener('pointermove', function(e){
+    if (e.pointerId !== dragId || !state || !state.running) return;
+    if (Math.abs(e.clientX - dragStartX) > 4) dragHint.style.display = 'none';
+    var x = dragStartPlayerX + (e.clientX - dragStartX) * 1.3;
+    state.playerX = Math.max(0, Math.min(state.fieldW - PLAYER_W, x));
+    positionPlayer();
+  });
+  function endDrag(e){ if (e.pointerId === dragId) dragId = null; }
+  playfield.addEventListener('pointerup', endDrag);
+  playfield.addEventListener('pointercancel', endDrag);
+  playfield.addEventListener('lostpointercapture', endDrag);
+
+  function scheduleSpawn(){
+    if (!state || !state.active) return;
+    var elapsed = CONFIG.gameTime - state.timeLeft;
+    var isRock = Math.random() < 0.2 + elapsed*0.006; // 20% → ~38% rocks
+    spawnAt(isRock ? 'rock' : 'seed', Math.random() * (state.fieldW - ITEM), -40);
+    spawnTimeoutId = setTimeout(scheduleSpawn, Math.max(320, 850 - elapsed*18));
+  }
+
+  function spawnAt(type, x, y){
+    var el = document.createElement('div');
+    el.className = 'falling ' + type;
+    el.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+    playfield.appendChild(el);
+    state.items.push({ el:el, x:x, y:y, type:type });
+  }
+
+  function loop(){
+    if (!state || !state.active) return;
+    var now = performance.now();
+    var dt = Math.min(0.05, (now - lastTick) / 1000);
+    lastTick = now;
+
+    state.timeLeft -= dt;
+    if (state.timeLeft <= 0){ state.timeLeft = 0; updateHud(); endGame(); return; }
+
+    var elapsed = CONFIG.gameTime - state.timeLeft;
+    var step = (185 + elapsed * 6) * dt; // px this tick, faster over time
+
+    // catch zone = upper 60% of the character (head/hands), not the feet
+    var top = state.playerTop, bottom = state.playerTop + PLAYER_H * 0.6;
+    var left = state.playerX + 10, right = state.playerX + PLAYER_W - 10;
+
+    for (var i = state.items.length - 1; i >= 0; i--){
+      var it = state.items[i];
+      it.y += step;
+      it.el.style.transform = 'translate(' + it.x + 'px,' + it.y + 'px)';
+      if (it.y + ITEM > top && it.y < bottom && it.x + ITEM > left && it.x < right){
+        removeItem(i);
+        if (it.type === 'seed') catchSeed(it); else hitRock();
+        if (!state.running) return;
+      } else if (it.y > state.fieldH){
+        removeItem(i);
+      }
+    }
+    updateHud();
+  }
+
+  function removeItem(i){
+    var it = state.items[i];
+    if (it.el.parentNode) it.el.parentNode.removeChild(it.el);
+    state.items.splice(i, 1);
+  }
+  function clearItems(){
+    state.items.forEach(function(it){ if (it.el.parentNode) it.el.parentNode.removeChild(it.el); });
+    state.items = [];
+  }
+
+  function catchSeed(it){
+    state.score += 1;
+    beep(880, 60, 'sine', 0.08);
+    var p = document.createElement('div');
+    p.className = 'pop'; p.textContent = '+1';
+    p.style.transform = 'translate(' + it.x + 'px,' + (state.playerTop - 24) + 'px)';
+    playfield.appendChild(p);
+    setTimeout(function(){ if (p.parentNode) p.parentNode.removeChild(p); }, 520);
+    player.classList.add('squash');
+    setTimeout(function(){ player.classList.remove('squash'); }, 100);
+  }
+
+  function hitRock(){
+    state.lives -= 1;
+    beep(150, 180, 'square', 0.07);
+    vibrate(120);
+    var g = screens.game;
+    g.classList.remove('shake'); void g.offsetWidth; g.classList.add('shake');
+    flashEl.classList.add('on');
+    setTimeout(function(){ flashEl.classList.remove('on'); }, 150);
+    if (state.lives <= 0){ state.endedByLives = true; endGame(); }
+  }
+
+  // Only touch the DOM when something changed.
+  function updateHud(){
+    var t = Math.ceil(state.timeLeft);
+    var key = state.lives + '|' + t + '|' + state.score;
+    if (key === state.hud) return;
+    state.hud = key;
+    var lives = Math.max(0, state.lives);
+    heartsEl.textContent = '❤️'.repeat(lives) + '🤍'.repeat(3 - lives);
+    timerEl.textContent = t + 's';
+    timerEl.classList.toggle('hurry', t <= 5 && state.running);
+    scoreEl.innerHTML = '<i class="mini-seed"></i>' + state.score;
+  }
+
+  function endGame(){
+    if (!state || !state.running) return; // never end (and issue a code) twice
+    state.running = false;
+    state.active = false;
+    dragId = null;
+    clearTimeout(spawnTimeoutId);
+    clearInterval(loopId);
+    timerEl.classList.remove('hurry');
+    dragHint.style.display = 'none';
+
+    var today = state.playDate;
+    var tier = state.score >= CONFIG.discountAt ? 2 : (state.score >= CONFIG.toppingAt ? 1 : 0);
+    var r = { date:today, score:state.score, tier:tier, char:state.char, endedByLives:state.endedByLives,
+              code:null, validFrom:null, validTo:null, app:appName(), capped:false };
+    if (tier && activeVouchers().length >= CONFIG.maxVouchers){
+      r.capped = true; // already holding the maximum of unused codes: no new one
+    } else if (tier){
+      // Code = prize letter (G giảm giá / T topping) + play date DDMM + 3 random digits, e.g. G2709-164.
+      var all = loadVouchers(), code;
+      do {
+        code = (tier === 2 ? 'G' : 'T') + today.slice(8,10) + today.slice(5,7) + '-' +
+               String(Math.floor(Math.random()*1000)).padStart(3,'0');
+      } while (all.some(function(v){ return v.code === code; }));
+      r.code = code;
+      r.validFrom = addDays(today, 1);
+      r.validTo = addDays(today, CONFIG.validDays);
+      all.push({ code:code, tier:tier, playDate:today, validFrom:r.validFrom, validTo:r.validTo,
+                 used:false, usedAt:null, usedDate:null });
+      var cutoff = addDays(today, -14); // forget long-expired codes
+      saveJSON(VOUCHER_KEY, all.filter(function(v){ return v.validTo >= cutoff; }));
+    }
+    saveJSON(LAST_KEY, r); // saved before the pause below, so a reload keeps the result
+
+    // A short "time's up" beat before the result screen (also swallows stray drag taps).
+    beep(tier ? 660 : 330, 250, 'triangle', 0.08);
+    countdownEl.textContent = state.endedByLives ? 'Hết tim!' : 'Hết giờ!';
+    setTimeout(function(){
+      countdownEl.textContent = '';
+      clearItems();
+      refreshBanners();
+      renderResult(r);
+    }, 900);
+  }
+
+  // ---- Result ----
+  function renderResult(r){
+    $('result-img').src = spriteSrc(r.char);
+    var title, msg;
+    if (r.tier && r.capped){
+      title = 'Giỏi quá! 🎉';
+      msg = 'Bạn đang giữ đủ ' + CONFIG.maxVouchers + ' mã chưa dùng — ghé HAMICHEE dùng bớt rồi hứng thêm quà nha!';
+    }
+    else if (r.tier === 2){ title = 'Quà xịn hẹn gặp lại! 🏆'; msg = 'Lần ghé sau bạn được giảm 10% hóa đơn'; }
+    else if (r.tier === 1){ title = 'Quà hẹn gặp lại! 🎁'; msg = 'Lần ghé sau bạn được tặng 1 topping'; }
+    else {
+      var missing = CONFIG.toppingAt - r.score;
+      var near = missing <= 5;
+      title = r.endedByLives ? 'Hết tim rồi! 💔' : (near ? 'Suýt nữa rồi! 😆' : 'Khởi động vậy là ổn rồi!');
+      msg = near ? 'Chỉ thiếu ' + missing + ' hạt nữa là có quà! Mai ghé HAMICHEE hứng tiếp nha!'
+                 : 'Mai ghé HAMICHEE hứng tiếp nha!';
+    }
+    $('result-title').textContent = title;
+    $('result-score').textContent = r.score;
+    $('result-msg').textContent = msg;
+    var hasCode = !!(r.tier && r.code);
+    $('prize-box').style.display = hasCode ? 'flex' : 'none';
+    if (hasCode){
+      $('result-code').textContent = r.code;
+      $('prize-range').textContent = 'Dùng từ ' + dm(r.validFrom) + ' đến ' + dmy(r.validTo) + ' · đưa trước khi thanh toán';
+      $('prize-cond').textContent = r.tier === 2 ? '(' + CONFIG.discountTerms + ')' : '';
+      $('prize-note').textContent = 'Lần sau ghé, quét lại mã QR trên bàn bằng ' + (r.app || 'Camera điện thoại') +
+        ' như hôm nay, rồi bấm “🎁 Mã ưu đãi của tôi”.';
+    }
+    $('zalo-btn').style.display = hasCode && CONFIG.zaloOA ? 'inline-block' : 'none';
+    if (CONFIG.zaloOA) $('zalo-btn').href = CONFIG.zaloOA;
+    $('brag').textContent = hasCode ? '📸 Chụp màn hình để khoe điểm và giữ mã phòng khi lạc mất nha!'
+                                    : '📸 Chụp màn hình khoe điểm với bạn bè nha!';
+    refreshBanners();
+    show('result');
+  }
+
+  // ---- My vouchers (the cashier checks this screen) ----
+  var renderedDate = null;
+  function renderVouchers(){
+    var t = todayStr();
+    renderedDate = t;
+    $('v-warn').style.display = clockState === 'bad' ? 'block' : 'none';
+    var list = $('voucher-list');
+    list.innerHTML = '';
+    var shown = loadVouchers().filter(function(v){
+      var s = voucherStatus(v);
+      return s === 'ok' || s === 'soon' || (s === 'used' && v.usedDate === t);
+    });
+    // usable today first
+    var order = { ok:0, soon:1, used:2 };
+    shown.sort(function(a,b){ return order[voucherStatus(a)] - order[voucherStatus(b)]; });
+    if (!shown.length){
+      list.innerHTML = '<p class="empty">Bạn chưa có mã ưu đãi nào còn hạn.</p>';
+    }
+    shown.forEach(function(v){
+      var s = voucherStatus(v);
+      var card = document.createElement('div');
+      card.className = 'voucher ' + s;
+      card.innerHTML = '<div class="v-prize"></div><div class="code"></div><div class="v-range"></div><div class="v-status"></div>';
+      card.querySelector('.v-prize').textContent = prizeText(v.tier);
+      card.querySelector('.code').textContent = v.code;
+      card.querySelector('.v-range').textContent = 'Hạn dùng: ' + dmy(v.validFrom) + ' – ' + dmy(v.validTo);
+      card.querySelector('.v-status').textContent =
+        s === 'ok' ? '✅ Dùng được hôm nay' :
+        s === 'soon' ? '⏳ Chưa dùng được — từ ' + dm(v.validFrom) + ' (lần ghé sau)' :
+        'ĐÃ SỬ DỤNG lúc ' + v.usedAt;
+      if (s === 'ok'){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'staff-btn';
+        b.innerHTML = '<span>Dành cho nhân viên quầy · giữ 3 giây để xác nhận đã dùng</span>';
+        attachHold(b, v.code);
+        card.appendChild(b);
+      }
+      list.appendChild(card);
+    });
+    tickClock();
+  }
+
+  // Staff hold-to-confirm (3s) so a code cannot be shown on a second bill.
+  function attachHold(btn, code){
+    var timer = null;
+    btn.addEventListener('pointerdown', function(e){
+      e.preventDefault();
+      clearTimeout(timer); // a second finger must not leave an orphan timer
+      btn.classList.add('holding');
+      timer = setTimeout(function(){
+        btn.classList.remove('holding');
+        // Re-read storage: another tab may already have used this code.
+        var all = loadVouchers();
+        var v = all.filter(function(x){ return x.code === code; })[0];
+        if (v && voucherStatus(v) === 'ok'){
+          v.used = true;
+          v.usedAt = timeStr(new Date(), false);
+          v.usedDate = todayStr();
+          saveJSON(VOUCHER_KEY, all);
+          vibrate(60);
+        }
+        renderVouchers();
+        refreshBanners();
+      }, 3000);
+    });
+    ['pointerup','pointercancel','pointerleave'].forEach(function(ev){
+      btn.addEventListener(ev, function(){ clearTimeout(timer); btn.classList.remove('holding'); });
+    });
+  }
+
+  // Live clock + blinking dot make an old screenshot easy to spot.
+  // It also re-checks the dates, so a screen left open past midnight updates itself.
+  function tickClock(){
+    if (!isShown('vouchers')) return;
+    if (renderedDate !== todayStr()){ renderVouchers(); return; }
+    var d = new Date();
+    $('v-clock-text').textContent = WEEKDAYS[d.getDay()] + ', ' + dmy(todayStr()) + ' · ' + timeStr(d, true);
+  }
+  // A tab left open overnight: move off yesterday's result / "already played" screen.
+  var homeDate = todayStr();
+  function checkDay(){
+    var t = todayStr();
+    if (t === homeDate) return;
+    homeDate = t;
+    if (isShown('locked') || isShown('result') || isShown('select')) goHome();
+  }
+  setInterval(function(){ tickClock(); checkDay(); }, 1000);
+
+  // Another tab changed the codes (e.g. staff confirmed it there): show the fresh state here.
+  window.addEventListener('storage', function(e){
+    if (e.key !== VOUCHER_KEY && e.key !== LOCK_KEY) return;
+    if (isShown('vouchers')) renderVouchers();
+    refreshBanners();
+    if (e.key === LOCK_KEY && isShown('select')) goHome();
+  });
+
+  // ---- Startup ----
+  if (!storageOk()) show('blocked');
+  else goHome();
+})();
+</script>
+</body>
+</html>
