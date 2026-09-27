@@ -230,6 +230,19 @@
   #prize-note{ font-size:12.5px; color:#555; max-width:320px; line-height:1.45; }
   #zalo-btn{ display:none; text-decoration:none; }
   .brag{ font-size:13px; color:#666; margin-top:6px; }
+  #btn-challenge{ margin-top:8px; background:var(--orange); box-shadow:0 4px 0 #c7801a; }
+  #share-sheet{
+    display:none; position:absolute; inset:0; z-index:20; background:rgba(20,30,20,.72);
+    align-items:center; justify-content:center; padding:16px;
+  }
+  #share-sheet.on{ display:flex; }
+  .ss-card{ background:#fff; border-radius:18px; padding:12px; width:100%; max-width:340px; max-height:100%; overflow-y:auto;
+            display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center; }
+  #ss-img{ width:100%; max-width:240px; border-radius:12px; box-shadow:0 4px 14px rgba(0,0,0,.2);
+           -webkit-touch-callout:default; -webkit-user-select:auto; user-select:auto; }
+  .ss-hint{ margin:0; font-size:13px; color:#444; }
+  .ss-link{ font-size:12px; color:var(--green-dark); word-break:break-all; -webkit-user-select:text; user-select:text; }
+  .ss-actions{ display:flex; gap:8px; }
   .brand{ font-size:12.5px; color:var(--green); font-weight:bold; }
 
   /* ---- Vouchers ---- */
@@ -416,8 +429,22 @@
     </div>
     <button type="button" class="btn-soft js-vouchers" id="result-vouchers">🎁 Mã ưu đãi của tôi</button>
     <a class="btn-soft" id="zalo-btn" href="#" target="_blank" rel="noopener">💬 Quan tâm Zalo HAMICHEE để được nhắc mã</a>
+    <button type="button" class="btn-main" id="btn-challenge">📣 Thách bạn bè</button>
     <div class="brag" id="brag"></div>
     <div class="brand">HAMICHEE · Chè hạt đác Khánh Hòa · vị nhà mát lành</div>
+  </div>
+
+  <!-- Challenge image (fallback when the phone cannot share files) -->
+  <div id="share-sheet">
+    <div class="ss-card">
+      <img id="ss-img" alt="Ảnh thách đấu Hứng Hạt Đác">
+      <p class="ss-hint">Nhấn giữ ảnh để lưu, rồi đăng story Facebook / Zalo và gửi link cho bạn bè nha!</p>
+      <div class="ss-link" id="ss-link"></div>
+      <div class="ss-actions">
+        <button type="button" class="btn-soft" id="ss-copy">📋 Sao chép link</button>
+        <button type="button" class="btn-soft" id="ss-close">Đóng</button>
+      </div>
+    </div>
   </div>
 
   <!-- My vouchers (what the cashier looks at) -->
@@ -1236,11 +1263,116 @@
     }
     $('zalo-btn').style.display = hasCode && CONFIG.zaloOA ? 'inline-block' : 'none';
     if (CONFIG.zaloOA) $('zalo-btn').href = CONFIG.zaloOA;
-    $('brag').textContent = hasCode ? '📸 Chụp màn hình để khoe điểm và giữ mã phòng khi lạc mất nha!'
-                                    : '📸 Chụp màn hình khoe điểm với bạn bè nha!';
+    $('brag').textContent = hasCode ? '📸 Nhớ chụp màn hình để giữ mã phòng khi lạc mất nha!' : '';
+    prepareChallenge(r);
     refreshBanners();
     show('result');
   }
+
+  // ---- "Thách bạn bè": a story-size image (1080×1920) to post, plus the game link ----
+  // The image is prepared as soon as the result shows, so a tap can open the share
+  // sheet straight away (phones only allow sharing right after a tap).
+  var GAME_URL = location.origin + location.pathname;
+  var challenge = { blob:null, url:null, text:'' };
+
+  function loadImg(src){
+    return new Promise(function(resolve){
+      var im = new Image(); im.onload = function(){ resolve(im); }; im.onerror = function(){ resolve(null); }; im.src = src;
+    });
+  }
+  function roundRect(ctx, x, y, w, h, r){
+    ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  }
+  function drawSeed(ctx, x, y, r, gold){
+    var g = ctx.createRadialGradient(x - r*0.3, y - r*0.35, r*0.1, x, y, r);
+    g.addColorStop(0, '#ffffff'); g.addColorStop(0.55, gold ? '#ffd84a' : '#fbf6e6'); g.addColorStop(1, gold ? '#d99a00' : '#e6cf8f');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+    ctx.lineWidth = r*0.12; ctx.strokeStyle = gold ? '#9a6a00' : '#8a6a22'; ctx.stroke();
+  }
+  // Sprites are JPG crops on a cream background: draw them on a cream plate so the edge does not show.
+  function drawSprite(ctx, im, cx, bottom, h){
+    if (!im) return;
+    var w = h * im.width / im.height;
+    ctx.drawImage(im, cx - w/2, bottom - h, w, h);
+  }
+
+  function prepareChallenge(r){
+    challenge.blob = null;
+    var win = r.tier === 2 || r.outcome === 'win';
+    var line = win ? 'Mình đã cứu được Vợ Chè!' : 'Mình tới được màn ' + (r.reached || 1) + ' / 3';
+    challenge.text = (win ? 'Mình vừa hứng ' + r.score + ' hạt đác và cứu được Vợ Chè 🏆'
+                          : 'Mình hứng được ' + r.score + ' hạt đác, tới màn ' + (r.reached || 1)) +
+                     ' trong game Hứng Hạt Đác của HAMICHEE! Bạn dám thử không? 😏 ' + GAME_URL;
+    Promise.all([loadImg('assets/chong-dac-sprite.png'), loadImg('assets/vo-che-sprite.png'), loadImg('assets/chua-te-sprite.png')])
+      .then(function(ims){
+        var W = 1080, H = 1920, c = document.createElement('canvas'); c.width = W; c.height = H;
+        var ctx = c.getContext('2d');
+        // background
+        var bg = ctx.createLinearGradient(0, 0, 0, H);
+        bg.addColorStop(0, '#00783E'); bg.addColorStop(0.55, '#00542b'); bg.addColorStop(1, '#1f3a26');
+        ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+        [[120,260,26,0],[960,220,34,1],[180,1420,30,0],[930,1500,24,0],[90,860,20,1],[1000,900,28,0],[540,120,22,0]]
+          .forEach(function(s){ drawSeed(ctx, s[0], s[1], s[2], s[3]); });
+        ctx.textAlign = 'center';
+        var font = function(px, w){ return (w || 'bold') + ' ' + px + 'px "Segoe UI", Roboto, Arial, sans-serif'; };
+        ctx.fillStyle = '#FFCC4E'; ctx.font = font(64); ctx.fillText('HAMICHEE', W/2, 190);
+        ctx.fillStyle = '#ffffff'; ctx.font = font(92); ctx.fillText('HỨNG HẠT ĐÁC', W/2, 320);
+        ctx.fillStyle = '#e4f2e8'; ctx.font = font(46, '600'); ctx.fillText('Giải Cứu Vợ Chè', W/2, 390);
+        // cream plate with the characters
+        ctx.fillStyle = '#F1E5D6'; roundRect(ctx, 90, 460, 900, 720, 60); ctx.fill();
+        if (win){
+          drawSprite(ctx, ims[0], 380, 1120, 560);
+          drawSprite(ctx, ims[1], 700, 1120, 520);
+        } else {
+          drawSprite(ctx, ims[0], 360, 1120, 560);
+          drawSprite(ctx, ims[2], 740, 900, 330);
+          ctx.fillStyle = '#d93a3a'; ctx.font = font(80); ctx.fillText('VS', 575, 960);
+        }
+        // result
+        ctx.fillStyle = '#FFCC4E'; ctx.font = font(58); ctx.fillText(line, W/2, 1290);
+        ctx.fillStyle = '#FAA627'; ctx.font = font(210); ctx.fillText(String(r.score), W/2, 1510);
+        ctx.fillStyle = '#ffffff'; ctx.font = font(58, '600'); ctx.fillText('hạt đác', W/2, 1590);
+        ctx.fillStyle = '#ffffff'; ctx.font = font(66); ctx.fillText('Bạn dám thử không? 😏', W/2, 1700);
+        // footer
+        ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.font = font(36, '600');
+        ctx.fillText('Quét QR tại quán HAMICHEE · 41 Hoàng Hoa Thám, Nha Trang', W/2, 1800);
+        ctx.fillStyle = '#FFCC4E'; ctx.font = font(34, '600'); ctx.fillText(GAME_URL.replace(/^https?:\/\//, ''), W/2, 1856);
+        c.toBlob(function(b){
+          challenge.blob = b;
+          if (challenge.url) URL.revokeObjectURL(challenge.url);
+          challenge.url = b ? URL.createObjectURL(b) : null;
+        }, 'image/png');
+      });
+  }
+
+  function openShareSheet(){
+    $('ss-img').src = challenge.url || '';
+    $('ss-link').textContent = GAME_URL;
+    $('share-sheet').classList.add('on');
+  }
+  $('btn-challenge').addEventListener('click', function(){
+    var file = challenge.blob ? new File([challenge.blob], 'thach-hung-hat-dac.png', { type:'image/png' }) : null;
+    if (file && navigator.canShare && navigator.canShare({ files:[file] })){
+      navigator.share({ files:[file], text:challenge.text, title:'Hứng Hạt Đác – HAMICHEE' })
+        .catch(function(err){ if (!err || err.name !== 'AbortError') openShareSheet(); });
+    } else if (challenge.url){
+      openShareSheet();
+    } else if (navigator.share){
+      navigator.share({ text:challenge.text, url:GAME_URL }).catch(function(){});
+    }
+  });
+  $('ss-close').addEventListener('click', function(){ $('share-sheet').classList.remove('on'); });
+  $('ss-copy').addEventListener('click', function(){
+    var b = this, done = function(){ b.textContent = '✅ Đã sao chép'; setTimeout(function(){ b.textContent = '📋 Sao chép link'; }, 1800); };
+    var fallback = function(){
+      var range = document.createRange(); range.selectNodeContents($('ss-link'));
+      var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+      try { document.execCommand('copy'); done(); } catch(e){}
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(challenge.text).then(done, fallback);
+    else fallback();
+  });
 
   // ---- My vouchers (the cashier checks this screen) ----
   var renderedDate = null;
