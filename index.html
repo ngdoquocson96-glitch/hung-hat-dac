@@ -270,6 +270,9 @@
   details{ font-size:12px; color:#555; max-width:340px; text-align:left; line-height:1.5; }
   summary{ cursor:pointer; color:var(--green-dark); font-weight:bold; text-align:center; }
   .empty{ color:#666; }
+  .mute-btn{ background:#fff; border:1.5px solid #cdbfa9; border-radius:50%; width:32px; height:32px; font-size:16px; line-height:1; padding:0; cursor:pointer; flex:none; }
+  #screen-home{ position:relative; }
+  .home-mute{ position:absolute; top:12px; right:14px; }
   .link-btn{ background:none; border:none; color:var(--green-dark); text-decoration:underline; font-size:13.5px; cursor:pointer; padding:6px; }
   #recover-box{ width:100%; }
   #recover-form{ display:flex; flex-direction:column; gap:6px; margin-top:8px; background:#fff; border-radius:14px; padding:12px; }
@@ -318,6 +321,7 @@
 
   <!-- Home -->
   <div id="screen-home" class="screen">
+    <button type="button" class="mute-btn js-mute home-mute" aria-label="Tắt âm thanh">🔊</button>
     <h1>Giải Cứu Vợ Chè</h1>
     <button type="button" class="banner js-vouchers" id="home-banner"></button>
     <div class="versus">
@@ -360,6 +364,7 @@
       <span id="level-label"></span>
       <div id="bar"><div id="bar-fill"></div><div id="bar-text"></div></div>
       <span id="buffs"></span>
+      <button type="button" class="mute-btn js-mute" aria-label="Tắt âm thanh">🔊</button>
     </div>
     <div id="playfield">
       <img id="boss" class="fade-round" src="assets/chua-te-sprite.png" alt="">
@@ -491,11 +496,11 @@
   // hazard: tỉ lệ đồ phải né = base + perSec × giây; bombShare: phần bom trong đồ phải né
   // companion: tỉ lệ có đồ rơi kèm sát bên hạt đác
   var LEVELS = [
-    { name:'Rừng đác Khánh Hòa', goal:10, time:30, sky:'#DDEFE3',
+    { name:'Rừng đác Khánh Hòa', goal:10, time:30, sky:'#DDEFE3', music:'forest',
       speed:[170,5], spawn:[800,14,330], hazard:[0.18,0.006], bombShare:0, companion:[0.12,0.004] },
-    { name:'Chợ đêm Nha Trang', goal:15, time:30, sky:'#F7D9BE',
+    { name:'Chợ đêm Nha Trang', goal:15, time:30, sky:'#F7D9BE', music:'market',
       speed:[210,8], spawn:[700,16,260], hazard:[0.30,0.009], bombShare:0.33, companion:[0.25,0.008] },
-    { name:'Hang Chất Bảo Quản', boss:true, bossHP:30, time:40, sky:'#DCCDEB',
+    { name:'Hang Chất Bảo Quản', boss:true, bossHP:30, time:40, sky:'#DCCDEB', music:'boss',
       speed:[200,5], spawn:[650,8,380], hazard:[0.15,0.004], bombShare:0, companion:[0.2,0.006],
       bossSpeed:80, bossThrow:[1.6,0.8] } // trùm ném đồ mỗi 1,6 giây, càng yếu máu ném càng nhanh (tới 0,8 giây)
   ];
@@ -618,27 +623,139 @@
   }
 
   // ---- Sound (WebAudio, created on the Start tap so mobile browsers allow it) ----
-  var audio = null;
+  // Everything is synthesised in code (8-bit style): no audio files, no copyright issues.
+  var audio = null, master = null, musicBus = null, noiseBuf = null;
+  var MUTE_KEY = 'hamichee_hunggame_mute';
+  var muted = load(MUTE_KEY) === '1';
   function wakeAudio(){
     if (audio && audio.state !== 'running'){
       try { var p = audio.resume(); if (p && p.catch) p.catch(function(){}); } catch(e){}
     }
   }
   function initAudio(){
-    try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); } catch(e){ audio = null; }
+    try {
+      if (!audio){
+        audio = new (window.AudioContext || window.webkitAudioContext)();
+        master = audio.createGain(); master.gain.value = muted ? 0 : 1; master.connect(audio.destination);
+        musicBus = audio.createGain(); musicBus.gain.value = 0.55; musicBus.connect(master);
+        noiseBuf = audio.createBuffer(1, audio.sampleRate * 0.4, audio.sampleRate);
+        var ch = noiseBuf.getChannelData(0);
+        for (var i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
+      }
+    } catch(e){ audio = null; }
     wakeAudio();
   }
-  function beep(freq, ms, type, vol){
+  // one note at time t (seconds, audio clock); optional slide to freq2
+  function tone(freq, t, dur, type, vol, dest, freq2){
     if (!audio) return;
     try {
-      var o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime;
-      o.type = type || 'sine'; o.frequency.value = freq;
-      g.gain.setValueAtTime(vol || 0.08, t);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + ms/1000);
-      o.connect(g); g.connect(audio.destination);
-      o.start(t); o.stop(t + ms/1000);
+      var o = audio.createOscillator(), g = audio.createGain();
+      o.type = type || 'sine';
+      o.frequency.setValueAtTime(freq, t);
+      if (freq2) o.frequency.exponentialRampToValueAtTime(freq2, t + dur);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(vol || 0.08, t + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(dest || master);
+      o.start(t); o.stop(t + dur + 0.02);
     } catch(e){}
   }
+  function noise(t, dur, vol, cutoff){
+    if (!audio) return;
+    try {
+      var s = audio.createBufferSource(), f = audio.createBiquadFilter(), g = audio.createGain();
+      s.buffer = noiseBuf; f.type = 'lowpass'; f.frequency.value = cutoff || 1200;
+      g.gain.setValueAtTime(vol || 0.2, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      s.connect(f); f.connect(g); g.connect(master); s.start(t); s.stop(t + dur);
+    } catch(e){}
+  }
+  var NOTE = { C:0, D:2, E:4, F:5, G:7, A:9, B:11 };
+  function hz(n){ // "C5", "F#4"
+    var m = /^([A-G])(#?)(\d)$/.exec(n); if (!m) return 0;
+    return 440 * Math.pow(2, (12 * (+m[3] + 1) + NOTE[m[1]] + (m[2] ? 1 : 0) - 69) / 12);
+  }
+  // a short run of notes, e.g. seq('C6 E6 G6', 0.06, 'square', 0.06)
+  function seq(notes, step, type, vol){
+    if (!audio) return;
+    var t = audio.currentTime + 0.01;
+    notes.split(' ').forEach(function(n, i){ if (n !== '-') tone(hz(n), t + i*step, step*1.4, type, vol); });
+  }
+  function beep(freq, ms, type, vol){ if (audio) tone(freq, audio.currentTime + 0.005, ms/1000, type, vol); }
+
+  var sfx = {
+    seed:   function(){ seq('E6 B6', 0.045, 'square', 0.05); },
+    gold:   function(){ seq('C6 E6 G6 C7 E7', 0.05, 'square', 0.055); },
+    combo:  function(){ seq('G5 C6 E6 G6 C7', 0.055, 'triangle', 0.08); },
+    decoy:  function(){ if (audio) tone(420, audio.currentTime + 0.005, 0.22, 'sawtooth', 0.05, null, 140); },
+    bomb:   function(){ if (!audio) return; var t = audio.currentTime + 0.005; noise(t, 0.35, 0.35, 900); tone(110, t, 0.3, 'square', 0.08, null, 40); },
+    power:  function(){ seq('A5 C#6 E6 A6 C#7', 0.045, 'triangle', 0.07); },
+    shield: function(){ seq('E5 B5 E6', 0.06, 'square', 0.05); },
+    hit:    function(){ if (!audio) return; var t = audio.currentTime + 0.005; noise(t, 0.08, 0.15, 3000); tone(300, t, 0.1, 'square', 0.05, null, 120); },
+    heal:   function(){ seq('E4 C4', 0.08, 'sawtooth', 0.04); },
+    throwIt:function(){ if (audio) tone(700, audio.currentTime + 0.005, 0.12, 'triangle', 0.03, null, 350); },
+    clear:  function(){ seq('C5 E5 G5 C6 - G5 C6', 0.09, 'square', 0.07); },
+    win:    function(){ seq('C5 E5 G5 C6 E6 - G5 C6 E6 G6 C7', 0.1, 'square', 0.07); },
+    lose:   function(){ seq('G4 E4 C4 G3', 0.16, 'triangle', 0.08); }
+  };
+
+  // ---- Background music: a tiny step sequencer (one step = an eighth note) ----
+  var SONGS = {
+    // bright pentatonic, like a village festival
+    forest: { bpm:128,
+      lead:'E5 G5 A5 G5 E5 D5 C5 D5 E5 G5 A5 C6 A5 G5 E5 - C5 D5 E5 G5 A5 G5 E5 D5 C5 D5 E5 D5 C5 - - -'.split(' '),
+      bass:'C3 G3 A2 E3 F2 C3 G2 G3 C3 G3 A2 E3 F2 G2 C3 -'.split(' ') },
+    market: { bpm:148,
+      lead:'G5 A5 C6 A5 G5 E5 G5 A5 C6 D6 C6 A5 G5 - E5 - D5 E5 G5 E5 D5 C5 D5 E5 G5 A5 G5 E5 D5 - C5 -'.split(' '),
+      bass:'C3 C3 A2 A2 F2 F2 G2 G2 C3 C3 A2 A2 F2 G2 C3 G2'.split(' ') },
+    // minor and driving for the boss
+    boss:   { bpm:164,
+      lead:'A4 C5 E5 A5 G5 E5 C5 E5 D5 F5 A5 D6 C6 A5 F5 A5 E5 G5 B5 E6 D6 B5 G5 B5 A5 E5 C5 E5 A5 - - -'.split(' '),
+      bass:'A2 A2 E2 E2 D2 D2 A2 A2 C3 C3 G2 G2 E2 E2 A2 E2'.split(' ') }
+  };
+  var music = { name:null, timer:null, step:0, next:0 };
+  function playMusic(name){
+    music.name = name;
+    if (!audio || muted || music.timer) return;
+    music.step = 0; music.next = audio.currentTime + 0.1;
+    music.timer = setInterval(scheduleMusic, 40);
+  }
+  function stopMusic(){ clearInterval(music.timer); music.timer = null; }
+  function switchMusic(name){ if (music.name !== name) stopMusic(); playMusic(name); }
+  function scheduleMusic(){
+    var s = SONGS[music.name]; if (!s || !audio) return;
+    var step = 60 / s.bpm / 2;
+    while (music.next < audio.currentTime + 0.2){
+      var i = music.step, n = s.lead[i % s.lead.length];
+      if (n && n !== '-') tone(hz(n), music.next, step * 0.9, 'square', 0.045, musicBus);
+      if (i % 2 === 0){
+        var b = s.bass[(i / 2) % s.bass.length];
+        if (b && b !== '-') tone(hz(b), music.next, step * 1.8, 'triangle', 0.09, musicBus);
+      }
+      if (i % 4 === 2) noise(music.next, 0.04, 0.05, 6000); // soft hi-hat
+      music.next += step; music.step++;
+    }
+  }
+
+  // Mute button(s): remembered on this phone
+  function renderMute(){
+    Array.prototype.forEach.call(document.querySelectorAll('.js-mute'), function(b){
+      b.textContent = muted ? '🔇' : '🔊';
+      b.setAttribute('aria-label', muted ? 'Bật âm thanh' : 'Tắt âm thanh');
+    });
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.js-mute'), function(b){
+    b.addEventListener('click', function(e){
+      e.stopPropagation();
+      initAudio();
+      muted = !muted;
+      store(MUTE_KEY, muted ? '1' : '0');
+      if (master) master.gain.value = muted ? 0 : 1;
+      if (muted) stopMusic();
+      else if (music.name && (isShown('game') || isShown('story'))) playMusic(music.name);
+      renderMute();
+    });
+  });
+  renderMute();
   function vibrate(ms){ try { if (navigator.vibrate) navigator.vibrate(ms); } catch(e){} }
 
   // ---- Home → story → game ----
@@ -655,6 +772,7 @@
       // Lock as soon as a play starts: reloading mid-game gives no free retry.
       store(LOCK_KEY, todayStr());
       show('story');
+      switchMusic('forest');
     });
   });
   $('btn-go').addEventListener('click', function(){ wakeAudio(); startGame(); });
@@ -754,6 +872,7 @@
       countdownEl.textContent = '';
       state.countdown = false;
       state.phase = 'playing';
+      switchMusic(lvl().music);
       if (!document.hidden) resume();
       return;
     }
@@ -776,6 +895,7 @@
       spawnAt('seed', cx - 60, state.playerTop * 0.35);
       spawnAt('seed', cx + 50, state.playerTop * 0.1);
     }
+    playMusic(lvl().music);
     lastTick = performance.now();
     spawnTimeoutId = setTimeout(scheduleSpawn, 400);
     loopId = setInterval(loop, 16);
@@ -783,15 +903,17 @@
   function pause(){
     if (!state || !state.running || !state.active) return;
     state.active = false;
+    stopMusic();
     dragId = null; // the browser may never send pointerup for a finger held during an app switch
     clearTimeout(spawnTimeoutId);
     clearInterval(loopId);
   }
   document.addEventListener('visibilitychange', function(){
-    if (document.hidden){ pause(); }
+    if (document.hidden){ pause(); stopMusic(); }
     else {
       wakeAudio();
       resume();
+      if (isShown('story')) playMusic(music.name);
       if (!state || !state.running) clockCheck = checkClock(); // customer may have fixed the phone clock
       checkDay();
     }
@@ -908,7 +1030,7 @@
       state.bossThrowLeft = L.bossThrow[1] + (L.bossThrow[0] - L.bossThrow[1]) * hpShare;
       var bx = Math.max(0, Math.min(state.fieldW - ITEM, state.bossX + BOSS_W/2 - ITEM/2 + (Math.random()*40 - 20)));
       spawnAt(Math.random() < 0.4 ? 'bomb' : 'chem', bx, BOSS_H - 20);
-      beep(300, 60, 'triangle', 0.03);
+      sfx.throwIt();
     }
   }
 
@@ -943,9 +1065,9 @@
         state.combo = 0;
         state.x2Left = COMBO_SECONDS;
         popText(it.x - 20, headY - 26, 'COMBO x2!', 'info');
-        beep(1200, 90, 'sine', 0.07);
+        sfx.combo();
       }
-      beep(it.type === 'gold' ? 1320 : 880, 60, 'sine', 0.08);
+      if (it.type === 'gold') sfx.gold(); else sfx.seed();
       popText(it.x, headY, '+' + gain);
       player.classList.add('squash');
       setTimeout(function(){ player.classList.remove('squash'); }, 100);
@@ -966,16 +1088,17 @@
       if (L.boss){
         state.bossHP = Math.min(L.bossHP, state.bossHP + 2); // preservatives make him stronger
         popText(state.bossX + 30, BOSS_H, '+2 máu', 'minus');
+        sfx.heal();
       } else {
         state.progress = Math.max(0, state.progress - 2);
       }
-      beep(260, 120, 'sawtooth', 0.05);
+      sfx.decoy();
       vibrate(40);
       popText(it.x, headY, '−2', 'minus');
       return;
     }
     // power-ups
-    beep(1000, 80, 'triangle', 0.07);
+    sfx.power();
     if (it.type === 'pu-pot'){ state.potLeft = POT_SECONDS; popText(it.x - 20, headY, '🍲 Nồi to!', 'info'); }
     else if (it.type === 'pu-shield'){ state.shield = true; popText(it.x - 20, headY, '🛡️ Có khiên!', 'info'); }
     else if (it.type === 'pu-heart'){ state.lives = Math.min(3, state.lives + 1); popText(it.x - 20, headY, '❤️ +1 tim', 'info'); }
@@ -986,14 +1109,14 @@
     if (state.shield){
       state.shield = false;
       popText(it.x - 20, headY, '🛡️ Chặn!', 'info');
-      beep(600, 120, 'square', 0.05);
+      sfx.shield();
       return;
     }
     state.lives -= 1;
     state.score = Math.max(0, state.score - 3);
     if (!lvl().boss) state.progress = Math.max(0, state.progress - 3);
     popText(it.x, headY, '−3', 'minus');
-    beep(150, 180, 'square', 0.07);
+    sfx.bomb();
     vibrate(120);
     var g = screens.game;
     g.classList.remove('shake'); void g.offsetWidth; g.classList.add('shake');
@@ -1014,6 +1137,7 @@
     requestAnimationFrame(function(){ s.style.transform = 'translate(' + tx + 'px,' + ty + 'px)'; });
     setTimeout(function(){ if (s.parentNode) s.parentNode.removeChild(s); }, 280);
 
+    sfx.hit();
     state.bossHP = Math.max(0, state.bossHP - dmg);
     boss.classList.add('hit');
     setTimeout(function(){ boss.classList.remove('hit'); }, 120);
@@ -1028,7 +1152,8 @@
     dragHint.style.display = 'none';
     clearItems();
     updateHud(true);
-    beep(660, 120, 'triangle', 0.08); setTimeout(function(){ beep(990, 200, 'triangle', 0.08); }, 130);
+    stopMusic();
+    sfx.clear();
     if (state.levelsCleared >= LEVELS.length){
       rescue();
       return;
@@ -1050,7 +1175,7 @@
     var r = $('rescue'), cage = $('rescue-cage');
     cage.classList.remove('open');
     r.style.display = 'flex';
-    setTimeout(function(){ cage.classList.add('open'); beep(880, 300, 'triangle', 0.08); }, 600);
+    setTimeout(function(){ cage.classList.add('open'); sfx.win(); }, 600);
     setTimeout(function(){ r.style.display = 'none'; endGame('win'); }, 2600);
   }
 
@@ -1081,6 +1206,7 @@
     state.active = false;
     state.phase = 'over';
     state.endReason = reason;
+    stopMusic();
     dragId = null;
     clearTimeout(spawnTimeoutId);
     clearInterval(loopId);
@@ -1114,7 +1240,7 @@
 
     if (reason === 'win'){ clearItems(); refreshBanners(); renderResult(r); return; }
     // A short "game over" beat before the result screen (also swallows stray drag taps).
-    beep(330, 250, 'triangle', 0.08);
+    sfx.lose();
     countdownEl.textContent = reason === 'lives' ? 'Hết tim!' : 'Hết giờ!';
     setTimeout(function(){
       countdownEl.textContent = '';
