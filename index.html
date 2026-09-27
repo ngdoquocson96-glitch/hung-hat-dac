@@ -12,6 +12,7 @@
     --yellow:#FFCC4E;
     --cream:#F1E5D6;
     --red:#d93a3a;
+    --purple:#6b3fa0;
   }
   *{box-sizing:border-box;}
   html{ touch-action:manipulation; } /* stops iOS double-tap zoom */
@@ -35,78 +36,29 @@
   .screen.active{ display:flex; }
   button{ font:inherit; }
 
-  .howto i.mit,.howto i.nhan,.howto i.thach{ display:inline-block; width:14px; height:14px; vertical-align:-2px; border-width:1.5px; }
-  .mini-seed{ display:inline-block; width:14px; height:14px; vertical-align:-2px; }
-  .mini-seed{ border-radius:50%; background:radial-gradient(circle at 35% 30%,#fff,#fbf6e6 55%,#e6cf8f); border:1.5px solid #8a6a22; }
-
-  .btn-main{
-    background:var(--green); color:#fff; border:none;
-    padding:14px 36px; border-radius:30px; font-size:17px; font-weight:bold;
-    box-shadow:0 4px 0 var(--green-dark); cursor:pointer;
-  }
-  .btn-main:disabled{ background:#bbb; box-shadow:0 4px 0 #999; cursor:not-allowed; }
-  .btn-main:active:not(:disabled){ transform:translateY(3px); box-shadow:0 1px 0 var(--green-dark); }
-  .btn-soft{
-    background:#fff; color:var(--green-dark); border:2px solid var(--green);
-    padding:9px 18px; border-radius:22px; font-size:14px; font-weight:bold; cursor:pointer;
-  }
-  .banner{
-    display:none; background:var(--yellow); color:var(--green-dark); border:none;
-    padding:10px 16px; border-radius:14px; font-size:14px; font-weight:bold; cursor:pointer;
-  }
-
-  /* ---- Select screen ---- */
-  #screen-select{ align-items:center; justify-content:flex-start; padding:28px 20px 20px; text-align:center; gap:12px; overflow-y:auto; }
-  #screen-select h1{ color:var(--green); font-size:22px; margin:0; }
-  .sub{ color:#555; margin:0; font-size:14px; }
-  .cards{ display:flex; gap:14px; margin-top:4px; }
-  .card{
-    width:136px; border:4px solid var(--green); border-radius:20px;
-    background:#fff; padding:8px; cursor:pointer; transition:transform .15s; color:inherit;
-  }
-  .card img{ width:100%; height:150px; object-fit:contain; border-radius:12px; display:block; background:var(--cream); }
-  .card span{ display:block; margin-top:6px; font-weight:bold; color:var(--green-dark); font-size:14px; }
-  .card[aria-pressed="true"]{ transform:scale(1.06); box-shadow:0 0 0 4px var(--orange); }
-  .howto{ background:#fff; border-radius:14px; padding:10px 16px; font-size:13.5px; color:#333; line-height:1.7; max-width:340px; }
-  .howto b{ color:var(--green-dark); }
-
-  /* ---- Game screen ---- */
-  #screen-game{ position:relative; touch-action:none; }
-  #screen-game.shake{ animation:shake .25s; }
-  @keyframes shake{ 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
-  #hud{
-    display:flex; justify-content:space-between; align-items:center;
-    padding:10px 14px; font-weight:bold; color:var(--green-dark); font-size:17px;
-  }
-  #timer{ color:var(--orange); min-width:48px; text-align:center; }
-  #timer.hurry{ color:var(--red); animation:pulse .5s infinite alternate; }
-  @keyframes pulse{ to{ transform:scale(1.25); } }
-  #score .mini-seed{ width:16px; height:16px; margin-right:4px; }
-  #playfield{
-    position:relative; flex:1; overflow:hidden; touch-action:none;
-    background:linear-gradient(#E4F2E8, var(--cream) 72%);
-  }
-  #player{
-    position:absolute; bottom:8px; left:0; width:72px; height:114px; object-fit:contain; z-index:4;
-    pointer-events:none; -webkit-touch-callout:none; -webkit-user-drag:none;
-    /* fade the left/right edges of the cream JPG so it does not look like a pasted box */
+  /* sprites are JPG-derived with a cream background: fade their edges */
+  .fade-x{
     -webkit-mask-image:linear-gradient(to right,transparent,#000 10%,#000 90%,transparent);
     mask-image:linear-gradient(to right,transparent,#000 10%,#000 90%,transparent);
-    transition:transform .1s;
   }
-  #player.squash{ transform:scale(1.1,.9); }
-  #shadow{
-    position:absolute; bottom:4px; left:0; width:72px; height:10px; border-radius:50%;
-    background:rgba(0,0,0,.15); z-index:3; pointer-events:none;
+  .fade-round{
+    -webkit-mask-image:radial-gradient(closest-side,#000 82%,transparent 100%);
+    mask-image:radial-gradient(closest-side,#000 82%,transparent 100%);
   }
-  .falling{ position:absolute; top:0; left:0; will-change:transform; pointer-events:none; }
+
+  /* ---- Falling things (also used as small icons in the how-to) ---- */
   .seed{
     width:30px; height:30px; border-radius:50%;
     background:radial-gradient(circle at 35% 30%, #ffffff, #fbf6e6 55%, #e6cf8f);
     border:2px solid #8a6a22;
     box-shadow:0 2px 4px rgba(0,0,0,.18);
   }
-  /* Decoys: other chè toppings (−1 point) */
+  .gold{
+    width:30px; height:30px; border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #fffbe0, #ffd84a 50%, #d99a00);
+    border:2px solid #9a6a00;
+    box-shadow:0 0 10px 3px rgba(255,200,40,.75);
+  }
   .mit{   /* múi mít */
     width:30px; height:30px; border-radius:50% 50% 45% 45% / 60% 60% 40% 40%;
     background:radial-gradient(circle at 40% 30%, #ffe08a, #f5b82e 60%, #d98e12);
@@ -123,62 +75,151 @@
     border:2px solid #3f8f3f;
     box-shadow:inset 3px 3px 0 rgba(255,255,255,.55);
   }
-  /* Bomb: −3 points and one life */
-  .bomb{ width:30px; height:30px; font-size:28px; line-height:30px; text-align:center; }
+  .bomb,.chem,.pu{ width:30px; height:30px; font-size:26px; line-height:30px; text-align:center; }
   .bomb::before{ content:'💣'; }
+  .chem::before{ content:'🧪'; }
+  .pu{ border-radius:50%; background:#fff; border:2px solid var(--yellow); box-shadow:0 0 8px 2px rgba(255,204,78,.8); font-size:18px; }
+  .pu-pot::before{ content:'🍲'; }
+  .pu-shield::before{ content:'🛡️'; }
+  .pu-heart::before{ content:'❤️'; }
+  .icon{ display:inline-block; width:15px; height:15px; vertical-align:-3px; border-width:1.5px; font-size:13px; line-height:15px; }
+  .icon.pu{ width:18px; height:18px; line-height:16px; font-size:11px; border-width:1.5px; box-shadow:none; }
+
+  .btn-main{
+    background:var(--green); color:#fff; border:none;
+    padding:14px 34px; border-radius:30px; font-size:17px; font-weight:bold;
+    box-shadow:0 4px 0 var(--green-dark); cursor:pointer;
+  }
+  .btn-main:disabled{ background:#bbb; box-shadow:0 4px 0 #999; cursor:not-allowed; }
+  .btn-main:active:not(:disabled){ transform:translateY(3px); box-shadow:0 1px 0 var(--green-dark); }
+  .btn-soft{
+    background:#fff; color:var(--green-dark); border:2px solid var(--green);
+    padding:9px 18px; border-radius:22px; font-size:14px; font-weight:bold; cursor:pointer;
+  }
+  .banner{
+    display:none; background:var(--yellow); color:var(--green-dark); border:none;
+    padding:10px 16px; border-radius:14px; font-size:14px; font-weight:bold; cursor:pointer;
+  }
+
+  /* ---- Home ---- */
+  #screen-home{ align-items:center; justify-content:flex-start; padding:24px 18px 18px; text-align:center; gap:12px; overflow-y:auto; }
+  #screen-home h1{ color:var(--green); font-size:24px; margin:0; }
+  .sub{ color:#555; margin:0; font-size:14px; max-width:330px; }
+  .versus{ display:flex; align-items:flex-end; justify-content:center; gap:8px; }
+  .versus .hero{ width:92px; height:146px; object-fit:contain; }
+  .versus .villain{ width:120px; height:113px; object-fit:contain; }
+  .versus b{ color:var(--red); font-size:20px; margin-bottom:40px; }
+  .howto{ background:#fff; border-radius:14px; padding:10px 14px; font-size:13px; color:#333; line-height:1.8; max-width:350px; text-align:left; }
+  .howto b{ color:var(--green-dark); }
+
+  /* ---- Story ---- */
+  #screen-story{ align-items:center; justify-content:center; text-align:center; padding:24px 20px; gap:14px; background:linear-gradient(#3b2a52, #1f1a2e); color:#f4ecff; }
+  #screen-story h2{ margin:0; font-size:22px; color:var(--yellow); }
+  #screen-story p{ margin:0; max-width:320px; line-height:1.55; font-size:15px; }
+  .story-art{ display:flex; align-items:flex-end; gap:10px; }
+  .story-art .villain{ width:130px; height:123px; object-fit:contain; }
+  .cage{ position:relative; width:84px; height:120px; }
+  .cage img{ width:100%; height:100%; object-fit:contain; }
+  .cage::after{ /* iron bars */
+    content:''; position:absolute; inset:-4px -6px; border:3px solid #555; border-radius:10px 10px 4px 4px;
+    background:repeating-linear-gradient(90deg, transparent 0 12px, #4a4a4a 12px 16px);
+    transition:transform .6s ease-in, opacity .6s;
+  }
+  .cage.open::after{ transform:translateY(-140px) rotate(-12deg); opacity:0; }
+
+  /* ---- Game ---- */
+  #screen-game{ position:relative; touch-action:none; }
+  #screen-game.shake{ animation:shake .25s; }
+  @keyframes shake{ 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+  #hud{ display:flex; justify-content:space-between; align-items:center; padding:8px 14px 2px; font-weight:bold; color:var(--green-dark); font-size:17px; }
+  #timer{ color:var(--orange); min-width:48px; text-align:center; }
+  #timer.hurry{ color:var(--red); animation:pulse .5s infinite alternate; }
+  @keyframes pulse{ to{ transform:scale(1.25); } }
+  #score .seed{ display:inline-block; width:16px; height:16px; vertical-align:-3px; margin-right:4px; border-width:1.5px; }
+  #hud2{ display:flex; align-items:center; gap:8px; padding:2px 14px 8px; font-size:12.5px; font-weight:bold; color:var(--green-dark); }
+  #level-label{ white-space:nowrap; }
+  #bar{ position:relative; flex:1; height:14px; border-radius:7px; background:rgba(0,0,0,.1); overflow:hidden; }
+  #bar-fill{ position:absolute; left:0; top:0; bottom:0; width:0; background:var(--green); border-radius:7px; transition:width .15s; }
+  #bar.boss #bar-fill{ background:linear-gradient(90deg,#8b3fd1,#4fb04a); }
+  #bar-text{ position:absolute; inset:0; text-align:center; font-size:10.5px; line-height:14px; color:#fff; text-shadow:0 1px 1px rgba(0,0,0,.5); }
+  #buffs{ white-space:nowrap; min-width:20px; }
+  #buffs .x2{ color:#fff; background:var(--orange); border-radius:6px; padding:0 4px; }
+
+  #playfield{ position:relative; flex:1; overflow:hidden; touch-action:none; background:linear-gradient(#E4F2E8, var(--cream) 72%); }
+  #player{
+    position:absolute; bottom:8px; left:0; width:72px; height:114px; object-fit:contain; z-index:4;
+    pointer-events:none; -webkit-touch-callout:none; -webkit-user-drag:none;
+    transition:transform .1s;
+  }
+  #player.squash{ transform:scale(1.1,.9); }
+  #shadow{ position:absolute; bottom:4px; left:0; width:72px; height:10px; border-radius:50%; background:rgba(0,0,0,.15); z-index:3; pointer-events:none; }
+  #aura{ /* big-pot catch zone */
+    display:none; position:absolute; left:0; width:124px; height:70px; border-radius:50%; z-index:3; pointer-events:none;
+    background:radial-gradient(ellipse, rgba(255,204,78,.55), rgba(255,204,78,0) 70%);
+  }
+  #shield{
+    display:none; position:absolute; left:0; width:96px; height:96px; border-radius:50%; z-index:5; pointer-events:none;
+    border:3px solid rgba(80,170,255,.8); background:rgba(80,170,255,.12);
+  }
+  #boss{ display:none; position:absolute; top:4px; left:0; width:112px; height:106px; object-fit:contain; z-index:4; pointer-events:none; transition:filter .1s; }
+  #boss.hit{ filter:brightness(1.8) saturate(.3); }
+  .falling{ position:absolute; top:0; left:0; will-change:transform; pointer-events:none; }
+  .shot{ position:absolute; top:0; left:0; width:16px; height:16px; z-index:6; pointer-events:none; transition:transform .25s ease-in; }
   .pop{
-    position:absolute; top:0; left:0; z-index:6; pointer-events:none;
+    position:absolute; top:0; left:0; z-index:6; pointer-events:none; white-space:nowrap;
     color:var(--orange); font-weight:bold; font-size:20px; text-shadow:0 1px 0 #fff;
-    animation:pop .5s ease-out forwards;
+    animation:pop .6s ease-out forwards;
   }
   .pop.minus{ color:var(--red); }
-  @keyframes pop{ from{opacity:1; margin-top:0;} to{opacity:0; margin-top:-30px;} }
+  .pop.info{ color:#1f6fd1; font-size:16px; }
+  @keyframes pop{ from{opacity:1; margin-top:0;} to{opacity:0; margin-top:-34px;} }
   #flash{ position:absolute; inset:0; background:var(--red); opacity:0; pointer-events:none; z-index:7; transition:opacity .15s; }
   #flash.on{ opacity:.25; }
   #countdown{
-    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-    font-size:64px; font-weight:bold; color:var(--green); z-index:8; pointer-events:none;
-    text-shadow:0 3px 0 #fff;
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center; text-align:center;
+    font-size:64px; font-weight:bold; color:var(--green); z-index:8; pointer-events:none; text-shadow:0 3px 0 #fff;
   }
-  #drag-hint{
-    position:absolute; left:0; right:0; top:62%; text-align:center; z-index:8; pointer-events:none;
-    font-size:16px; font-weight:bold; color:var(--green-dark); display:none;
+  #level-card{
+    display:none; position:absolute; left:16px; right:16px; top:28%; z-index:9; pointer-events:none;
+    background:rgba(255,255,255,.93); border-radius:18px; padding:16px; text-align:center; box-shadow:0 6px 20px rgba(0,0,0,.15);
   }
+  #level-card .lv{ font-size:14px; font-weight:bold; color:var(--orange); letter-spacing:.06em; text-transform:uppercase; }
+  #level-card .nm{ font-size:22px; font-weight:bold; color:var(--green); margin:4px 0; }
+  #level-card .gl{ font-size:15px; color:#333; }
+  #drag-hint{ position:absolute; left:0; right:0; top:62%; text-align:center; z-index:8; pointer-events:none; font-size:16px; font-weight:bold; color:var(--green-dark); display:none; }
+  #between, #rescue{
+    display:none; position:absolute; inset:0; z-index:10; align-items:center; justify-content:center; flex-direction:column; gap:12px;
+    background:rgba(241,229,214,.94); text-align:center; padding:20px;
+  }
+  #between h2, #rescue h2{ margin:0; color:var(--green); font-size:26px; }
+  #between p{ margin:0; color:#333; font-size:15px; max-width:300px; }
+  #rescue .pair{ display:flex; align-items:flex-end; gap:6px; }
+  #rescue .pair img.hero{ width:80px; height:127px; object-fit:contain; }
 
-  /* ---- Result screen ---- */
+  /* ---- Result ---- */
   #screen-result{ align-items:center; justify-content:flex-start; text-align:center; padding:18px 20px 16px; gap:6px; overflow-y:auto; }
   #result-title{ color:var(--green); margin:0; font-size:24px; }
-  #result-img{
-    width:56px; height:80px; object-fit:contain;
-    -webkit-mask-image:linear-gradient(to right,transparent,#000 12%,#000 88%,transparent);
-    mask-image:linear-gradient(to right,transparent,#000 12%,#000 88%,transparent);
-  }
+  #result-img{ width:56px; height:80px; object-fit:contain; }
   .caught{ color:#666; font-size:14px; }
   .score-line{ font-size:20px; font-weight:bold; color:var(--green-dark); }
   #result-score{ font-size:44px; color:var(--orange); }
   #result-msg{ font-size:15.5px; color:#333; max-width:330px; }
   #prize-box{ display:none; flex-direction:column; align-items:center; gap:6px; margin-top:4px; }
-  .code{
-    background:#fff; border:3px dashed var(--green); border-radius:14px;
-    padding:10px 22px; font-size:30px; font-weight:bold; letter-spacing:3px; color:var(--green-dark);
-  }
+  .code{ background:#fff; border:3px dashed var(--green); border-radius:14px; padding:10px 22px; font-size:30px; font-weight:bold; letter-spacing:3px; color:var(--green-dark); }
+  .code.small{ font-size:22px; padding:6px 16px; border-width:2px; }
   #prize-range{ font-size:16px; font-weight:bold; color:var(--orange); }
   #prize-cond{ font-size:12.5px; color:#555; }
-  .code.small{ font-size:22px; padding:6px 16px; border-width:2px; }
-  #zalo-btn{ display:none; text-decoration:none; }
-  #v-warn{ display:none; color:var(--red); font-size:13px; font-weight:bold; max-width:320px; }
   #prize-note{ font-size:12.5px; color:#555; max-width:320px; line-height:1.45; }
+  #zalo-btn{ display:none; text-decoration:none; }
   .brag{ font-size:13px; color:#666; margin-top:6px; }
   .brand{ font-size:12.5px; color:var(--green); font-weight:bold; }
 
-  /* ---- Vouchers screen ---- */
+  /* ---- Vouchers ---- */
   #screen-vouchers{ align-items:center; justify-content:flex-start; text-align:center; padding:18px 18px 16px; gap:10px; overflow-y:auto; }
   #screen-vouchers h2{ color:var(--green); margin:0; font-size:22px; }
   #v-clock{ font-size:14px; color:var(--green-dark); font-weight:bold; }
-  .live-dot{
-    display:inline-block; width:9px; height:9px; border-radius:50%; background:var(--red);
-    margin-right:6px; animation:blink 1s infinite;
-  }
+  #v-warn{ display:none; color:var(--red); font-size:13px; font-weight:bold; max-width:320px; }
+  .live-dot{ display:inline-block; width:9px; height:9px; border-radius:50%; background:var(--red); margin-right:6px; animation:blink 1s infinite; }
   @keyframes blink{ 50%{ opacity:.2; } }
   #voucher-list{ display:flex; flex-direction:column; gap:10px; width:100%; max-width:340px; }
   .voucher{ background:#fff; border-radius:16px; padding:12px 14px 10px; display:flex; flex-direction:column; align-items:center; gap:4px; border:2px solid #e3d6c3; }
@@ -190,14 +231,8 @@
   .v-status{ font-size:15px; font-weight:bold; color:var(--orange); }
   .voucher.ok .v-status{ color:var(--green); }
   .voucher.used .v-status{ color:var(--red); }
-  .staff-btn{
-    position:relative; overflow:hidden; margin-top:6px; width:100%;
-    border:none; border-top:1px dashed #ccc; background:none; color:#999;
-    padding:8px 4px 2px; font-size:11.5px; cursor:pointer; touch-action:none;
-  }
-  .staff-btn::before{
-    content:''; position:absolute; left:0; top:0; bottom:0; width:0; background:var(--yellow); opacity:.6; z-index:0;
-  }
+  .staff-btn{ position:relative; overflow:hidden; margin-top:6px; width:100%; border:none; border-top:1px dashed #ccc; background:none; color:#999; padding:8px 4px 2px; font-size:11.5px; cursor:pointer; touch-action:none; }
+  .staff-btn::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:0; background:var(--yellow); opacity:.6; z-index:0; }
   .staff-btn.holding::before{ width:100%; transition:width 3s linear; }
   .staff-btn span{ position:relative; z-index:1; }
   .v-short{ font-size:12.5px; color:#555; }
@@ -207,6 +242,10 @@
 
   .center-screen{ align-items:center; justify-content:center; text-align:center; padding:28px; gap:12px; }
   .center-screen h2{ color:var(--green); margin:0; }
+
+  @media (prefers-reduced-motion: reduce){
+    #screen-game.shake, #timer.hurry, .live-dot{ animation:none; }
+  }
 </style>
 </head>
 <body>
@@ -233,28 +272,36 @@
     <button type="button" class="banner js-vouchers" id="locked-banner"></button>
   </div>
 
-  <!-- Character select -->
-  <div id="screen-select" class="screen">
-    <h1>HAMICHEE — Hứng Hạt Đác</h1>
-    <button type="button" class="banner js-vouchers" id="select-banner"></button>
-    <p class="sub">Chọn nhân vật rồi hứng thật nhiều hạt đác trong 30 giây nhé!</p>
-    <div class="cards">
-      <button type="button" class="card" data-char="chong-dac" aria-pressed="false">
-        <img src="assets/chong-dac-sprite.png" alt="">
-        <span>Chồng Đác</span>
-      </button>
-      <button type="button" class="card" data-char="vo-che" aria-pressed="false">
-        <img src="assets/vo-che-sprite.png" alt="">
-        <span>Vợ Chè</span>
-      </button>
+  <!-- Home -->
+  <div id="screen-home" class="screen">
+    <h1>Giải Cứu Vợ Chè</h1>
+    <button type="button" class="banner js-vouchers" id="home-banner"></button>
+    <div class="versus">
+      <img class="hero fade-x" src="assets/chong-dac-sprite.png" alt="Chồng Đác">
+      <b>VS</b>
+      <img class="villain fade-round" src="assets/chua-te-sprite.png" alt="Chúa Tể Chất Bảo Quản">
     </div>
+    <p class="sub">Giúp Chồng Đác vượt 3 màn, đánh bại Chúa Tể Chất Bảo Quản để cứu Vợ Chè!</p>
     <div class="howto">
-      👆 <b>Kéo ngang</b> để di chuyển nhân vật<br>
-      <i class="mini-seed"></i> Chỉ hứng <b>hạt đác +1</b><br>
-      <i class="mit"></i> <i class="nhan"></i> <i class="thach"></i> Mít, nhãn, thạch <b>−2</b> &nbsp;·&nbsp; 💣 Bom <b>−3 và mất 1 tim</b><br>
+      👆 <b>Kéo ngang</b> để di chuyển Chồng Đác<br>
+      <i class="icon seed"></i> Hạt đác <b>+1</b> · <i class="icon gold"></i> Hạt vàng <b>+5</b> · 5 hạt liền mạch <b>x2</b><br>
+      <i class="icon mit"></i> <i class="icon nhan"></i> <i class="icon thach"></i> Mít, nhãn, thạch <b>−2</b> · 💣 Bom <b>mất 1 tim</b><br>
+      <i class="icon pu pu-pot"></i> Nồi to · <i class="icon pu pu-shield"></i> Khiên · <i class="icon pu pu-heart"></i> Thêm tim<br>
       🎁 <span id="howto-prizes"></span>
     </div>
-    <button type="button" class="btn-main" id="btn-start" disabled>Chọn nhân vật trước nha</button>
+    <button type="button" class="btn-main" id="btn-start">Đi cứu Vợ Chè! ▶</button>
+  </div>
+
+  <!-- Story (placeholder for the Flow intro clip) -->
+  <div id="screen-story" class="screen">
+    <h2>Vợ Chè bị bắt rồi!</h2>
+    <div class="story-art">
+      <img class="villain fade-round" src="assets/chua-te-sprite.png" alt="">
+      <div class="cage"><img class="fade-x" src="assets/vo-che-sprite.png" alt=""></div>
+    </div>
+    <p>Chúa Tể Chất Bảo Quản ghét chè nấu mới mỗi ngày, nên bắt Vợ Chè nhốt vào hang.</p>
+    <p>Chồng Đác phải hứng thật nhiều hạt đác để có sức mạnh đi cứu vợ!</p>
+    <button type="button" class="btn-main" id="btn-go">Lên đường! ▶</button>
   </div>
 
   <!-- Gameplay -->
@@ -264,19 +311,40 @@
       <div id="timer"></div>
       <div id="score"></div>
     </div>
+    <div id="hud2">
+      <span id="level-label"></span>
+      <div id="bar"><div id="bar-fill"></div><div id="bar-text"></div></div>
+      <span id="buffs"></span>
+    </div>
     <div id="playfield">
+      <img id="boss" class="fade-round" src="assets/chua-te-sprite.png" alt="">
+      <div id="aura"></div>
       <div id="shadow"></div>
-      <img id="player" alt="" draggable="false">
+      <img id="player" class="fade-x" src="assets/chong-dac-sprite.png" alt="" draggable="false">
+      <div id="shield"></div>
       <div id="countdown"></div>
+      <div id="level-card"><div class="lv" id="lc-lv"></div><div class="nm" id="lc-nm"></div><div class="gl" id="lc-gl"></div></div>
       <div id="drag-hint">👈 Kéo thử đi 👉</div>
       <div id="flash"></div>
+      <div id="between">
+        <h2 id="between-title"></h2>
+        <p id="between-text"></p>
+        <button type="button" class="btn-main" id="btn-next">Màn tiếp theo ▶</button>
+      </div>
+      <div id="rescue">
+        <h2>Cứu được Vợ Chè rồi! 🎉</h2>
+        <div class="pair">
+          <img class="hero fade-x" src="assets/chong-dac-sprite.png" alt="">
+          <div class="cage" id="rescue-cage"><img class="fade-x" src="assets/vo-che-sprite.png" alt=""></div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Result (right after playing, and again if reopened the same day) -->
+  <!-- Result -->
   <div id="screen-result" class="screen">
     <h2 id="result-title"></h2>
-    <img id="result-img" alt="">
+    <img id="result-img" class="fade-x" alt="">
     <div class="caught">Bạn hứng được</div>
     <div class="score-line"><span id="result-score">0</span> hạt đác</div>
     <div id="result-msg"></div>
@@ -309,25 +377,40 @@
 (function(){
   // ===== CẤU HÌNH — chủ quán chỉnh các con số / câu chữ ở đây =====
   var CONFIG = {
-    gameTime: 30,        // giây mỗi lượt
-    toppingAt: 15,       // từ bao nhiêu hạt thì tặng topping
-    discountAt: 28,      // từ bao nhiêu hạt thì giảm giá
     validDays: 6,        // mã dùng từ ngày hôm sau đến hết N ngày kể từ ngày chơi (≤6: iPhone có thể tự xóa dữ liệu sau 7 ngày)
     maxVouchers: 3,      // tối đa bao nhiêu mã chưa dùng trên 1 máy
     zaloOA: '',          // link "Quan tâm" Zalo OA của quán, vd 'https://zalo.me/xxxxxxxxxxxx' — để trống thì ẩn nút
-    toppingShort: 'tặng 1 topping',
-    discountShort: 'giảm 10%',
     toppingText: 'Tặng 1 topping bất kỳ',
     discountText: 'Giảm 10% hóa đơn',
     discountTerms: 'tối đa 10.000đ, hóa đơn từ 40.000đ',
     shop: 'HAMICHEE 41 Hoàng Hoa Thám'
   };
 
+  // ===== 3 MÀN CHƠI — chỉnh độ khó từng màn ở đây =====
+  // speed: tốc độ rơi (px/giây) = base + perSec × giây đã chơi
+  // spawn: khoảng cách giữa 2 lần rơi (ms) = start − perSec × giây, không nhỏ hơn min
+  // hazard: tỉ lệ đồ phải né = base + perSec × giây; bombShare: phần bom trong đồ phải né
+  // companion: tỉ lệ có đồ rơi kèm sát bên hạt đác
+  var LEVELS = [
+    { name:'Rừng đác Khánh Hòa', goal:10, time:30, sky:'#DDEFE3',
+      speed:[170,5], spawn:[800,14,330], hazard:[0.18,0.006], bombShare:0, companion:[0.12,0.004] },
+    { name:'Chợ đêm Nha Trang', goal:15, time:30, sky:'#F7D9BE',
+      speed:[210,8], spawn:[700,16,260], hazard:[0.30,0.009], bombShare:0.33, companion:[0.25,0.008] },
+    { name:'Hang Chất Bảo Quản', boss:true, bossHP:30, time:40, sky:'#DCCDEB',
+      speed:[200,5], spawn:[650,8,380], hazard:[0.15,0.004], bombShare:0, companion:[0.2,0.006],
+      bossSpeed:80, bossThrow:[1.6,0.8] } // trùm ném đồ mỗi 1,6 giây, càng yếu máu ném càng nhanh (tới 0,8 giây)
+  ];
+  var GOLD_CHANCE = 0.04;      // tỉ lệ hạt vàng
+  var POWERUP_CHANCE = 0.035;  // tỉ lệ rơi vật phẩm
+  var COMBO_NEED = 5, COMBO_SECONDS = 5, POT_SECONDS = 8;
+
   var LOCK_KEY = 'hamichee_hunggame_last_play';      // "YYYY-MM-DD" of the last play
   var LAST_KEY = 'hamichee_hunggame_last_result';    // last game result (re-shown the same day)
   var VOUCHER_KEY = 'hamichee_hunggame_vouchers';    // list of prize codes for next visits
-  var PLAYER_W = 72, PLAYER_H = 114, ITEM = 30;
+  var PLAYER_W = 72, PLAYER_H = 114, ITEM = 30, BOSS_W = 112, BOSS_H = 106;
   var WEEKDAYS = ['Chủ nhật','Thứ hai','Thứ ba','Thứ tư','Thứ năm','Thứ sáu','Thứ bảy'];
+  var DECOYS = ['mit', 'nhan', 'thach'];
+  var BAD = { mit:1, nhan:1, thach:1, chem:1, bomb:1 };
 
   // ---- Dates (local calendar, not UTC) ----
   function pad(n){ return String(n).padStart(2,'0'); }
@@ -370,15 +453,15 @@
 
   function $(id){ return document.getElementById(id); }
   var screens = {
-    blocked:$('screen-blocked'), clock:$('screen-clock'), locked:$('screen-locked'), select:$('screen-select'),
-    game:$('screen-game'), result:$('screen-result'), vouchers:$('screen-vouchers')
+    blocked:$('screen-blocked'), clock:$('screen-clock'), locked:$('screen-locked'), home:$('screen-home'),
+    story:$('screen-story'), game:$('screen-game'), result:$('screen-result'), vouchers:$('screen-vouchers')
   };
   function show(name){
     for (var k in screens) screens[k].classList.remove('active');
     screens[name].classList.add('active');
   }
   function isShown(name){ return screens[name].classList.contains('active'); }
-  function spriteSrc(c){ return c === 'vo-che' ? 'assets/vo-che-sprite.png' : 'assets/chong-dac-sprite.png'; }
+  function setText(el, v){ if (el._v !== v){ el._v = v; el.textContent = v; } }
 
   // Which app the QR was opened in: each app keeps its own storage, so the
   // customer must come back through the same app to see their codes.
@@ -405,17 +488,17 @@
   }
   var clockCheck = checkClock();
 
-  $('howto-prizes').textContent = CONFIG.toppingAt + ' hạt: ' + CONFIG.toppingShort + ' · ' +
-    CONFIG.discountAt + ' hạt: ' + CONFIG.discountShort + ' (' + CONFIG.discountTerms + ') · dùng ở lần ghé sau';
+  $('howto-prizes').textContent = 'Qua màn 2: tặng 1 topping · Cứu được Vợ Chè: giảm 10% (' +
+    CONFIG.discountTerms + ') · dùng ở lần ghé sau';
   $('terms').textContent = 'Mã không dùng trong ngày chơi; dùng ở lần ghé sau tại ' + CONFIG.shop +
     ', từ ngày hôm sau đến hết ' + CONFIG.validDays + ' ngày kể từ ngày chơi. Đưa mã cho nhân viên trước khi thanh toán. ' +
     'Mỗi hóa đơn/bàn 1 mã, không cộng dồn, không quy đổi tiền mặt. Ưu đãi giảm giá: ' + CONFIG.discountTerms + '. ' +
     'Mỗi mã chỉ dùng 1 lần — quán ghi lại mã đã dùng. Lỡ mất mã trên điện thoại? Đưa ảnh chụp màn hình kết quả cho nhân viên.';
 
-  // ---- Where to land: select, today's result, or "already played" ----
+  // ---- Where to land: home, today's result, or "already played" ----
   function refreshBanners(){
     var n = activeVouchers().length;
-    ['select-banner','locked-banner'].forEach(function(id){
+    ['home-banner','locked-banner'].forEach(function(id){
       var b = $(id);
       b.style.display = n ? 'inline-block' : 'none';
       b.textContent = n >= CONFIG.maxVouchers
@@ -431,7 +514,7 @@
       var last = loadJSON(LAST_KEY, null);
       if (last && last.date === t) renderResult(last); else show('locked');
     } else {
-      show('select');
+      show('home');
     }
   }
 
@@ -459,23 +542,10 @@
   }
   function vibrate(ms){ try { if (navigator.vibrate) navigator.vibrate(ms); } catch(e){} }
 
-  // ---- Character select ----
-  var selectedChar = null;
-  var cards = document.querySelectorAll('.card');
-  var btnStart = $('btn-start');
-  Array.prototype.forEach.call(cards, function(card){
-    card.addEventListener('click', function(){
-      Array.prototype.forEach.call(cards, function(c){ c.setAttribute('aria-pressed','false'); });
-      card.setAttribute('aria-pressed','true');
-      selectedChar = card.getAttribute('data-char');
-      btnStart.disabled = false;
-      btnStart.textContent = 'Bắt đầu hứng!';
-    });
-  });
-
-  var starting = false;
+  // ---- Home → story → game ----
+  var btnStart = $('btn-start'), starting = false;
   btnStart.addEventListener('click', function(){
-    if (!selectedChar || starting) return;
+    if (starting) return;
     starting = true;
     initAudio(); // must run inside the tap, before waiting
     // Wait for the clock check (normally already done), at most 2.5s.
@@ -485,9 +555,10 @@
       if (load(LOCK_KEY) === todayStr()){ goHome(); return; } // another tab played meanwhile
       // Lock as soon as a play starts: reloading mid-game gives no free retry.
       store(LOCK_KEY, todayStr());
-      startGame();
+      show('story');
     });
   });
+  $('btn-go').addEventListener('click', function(){ wakeAudio(); startGame(); });
 
   $('btn-clock-retry').addEventListener('click', function(){
     clockCheck = checkClock();
@@ -501,14 +572,22 @@
   $('btn-back').addEventListener('click', goHome);
 
   // ---- Game ----
-  var playfield = $('playfield'), player = $('player'), shadow = $('shadow');
+  var playfield = $('playfield'), player = $('player'), shadow = $('shadow'), aura = $('aura'), shieldEl = $('shield'), boss = $('boss');
   var heartsEl = $('hearts'), timerEl = $('timer'), scoreEl = $('score');
-  var countdownEl = $('countdown'), dragHint = $('drag-hint'), flashEl = $('flash');
+  var levelLabel = $('level-label'), bar = $('bar'), barFill = $('bar-fill'), barText = $('bar-text'), buffsEl = $('buffs');
+  var countdownEl = $('countdown'), levelCard = $('level-card'), dragHint = $('drag-hint'), flashEl = $('flash');
   var state = null, loopId = null, spawnTimeoutId = null, lastTick = 0;
 
+  function lvl(){ return LEVELS[state.level]; }
+
   function positionPlayer(){
-    player.style.left = state.playerX + 'px';
-    shadow.style.left = state.playerX + 'px';
+    var x = state.playerX;
+    player.style.left = x + 'px';
+    shadow.style.left = x + 'px';
+    aura.style.left = (x - 26) + 'px';
+    aura.style.top = (state.playerTop - 10) + 'px';
+    shieldEl.style.left = (x - 12) + 'px';
+    shieldEl.style.top = (state.playerTop - 4) + 'px';
   }
 
   // Re-measured on start and on every resize/rotation.
@@ -517,23 +596,57 @@
     state.fieldH = playfield.clientHeight;
     state.playerTop = player.offsetTop; // top of the character inside the playfield
     state.playerX = Math.max(0, Math.min(state.fieldW - PLAYER_W, state.playerX));
+    state.bossX = Math.max(0, Math.min(state.fieldW - BOSS_W, state.bossX));
     positionPlayer();
   }
 
   function startGame(){
-    player.src = spriteSrc(selectedChar);
     show('game'); // must be visible before measuring
     state = {
-      score:0, lives:3, timeLeft:CONFIG.gameTime, playerX:0, items:[],
-      running:true, active:false, countdown:true, firstStart:true,
-      endedByLives:false, char:selectedChar, hud:'',
+      score:0, lives:3, level:0, levelsCleared:0, items:[], playerX:0, bossX:0,
+      running:true, active:false, countdown:false, phase:'intro',
+      combo:0, x2Left:0, potLeft:0, shield:false,
+      endReason:null, char:'chong-dac',
       playDate:todayStr() // fixed at start: a game crossing midnight must not earn a second play
     };
     state.playerX = playfield.clientWidth/2 - PLAYER_W/2;
     measure();
-    updateHud();
     dragHint.style.display = 'block';
-    runCountdown(['3','2','1','Hứng nào!'], 0);
+    startLevel(0);
+  }
+
+  function startLevel(i){
+    var L = LEVELS[i];
+    state.level = i;
+    state.timeLeft = L.time;
+    state.progress = 0;
+    state.firstStart = true;
+    state.phase = 'intro';
+    state.bossHP = L.boss ? L.bossHP : 0;
+    state.bossThrowLeft = L.boss ? L.bossThrow[0] : 0;
+    state.bossDir = 1;
+    clearItems();
+    $('between').style.display = 'none';
+    playfield.style.background = 'linear-gradient(' + L.sky + ', var(--cream) 72%)';
+    boss.style.display = L.boss ? 'block' : 'none';
+    state.bossX = (playfield.clientWidth - BOSS_W) / 2;
+    boss.style.left = state.bossX + 'px';
+    bar.classList.toggle('boss', !!L.boss);
+    measure();
+    updateHud(true);
+
+    // Level card, then 3-2-1
+    setText($('lc-lv'), 'Màn ' + (i+1) + ' / ' + LEVELS.length);
+    setText($('lc-nm'), L.name);
+    setText($('lc-gl'), L.boss ? 'Hứng hạt đác để đánh Chúa Tể! Hạ trùm trong ' + L.time + ' giây'
+                               : 'Hứng đủ ' + L.goal + ' hạt đác trong ' + L.time + ' giây');
+    levelCard.style.display = 'block';
+    state.countdown = true;
+    setTimeout(function(){
+      if (!state || !state.running) return;
+      levelCard.style.display = 'none';
+      runCountdown(['3','2','1','Hứng nào!'], 0);
+    }, 1800);
   }
 
   function runCountdown(steps, i){
@@ -541,20 +654,21 @@
     if (i >= steps.length){
       countdownEl.textContent = '';
       state.countdown = false;
+      state.phase = 'playing';
       if (!document.hidden) resume();
       return;
     }
     countdownEl.textContent = steps[i];
     var last = i === steps.length - 1;
     beep(last ? 880 : 520, 120, 'triangle', 0.06);
-    setTimeout(function(){ runCountdown(steps, i+1); }, last ? 500 : 700);
+    setTimeout(function(){ runCountdown(steps, i+1); }, last ? 500 : 650);
   }
 
   // Everything stops while the page is hidden (customer switches app), and
   // time is counted from real elapsed time inside the loop, so switching
   // away and back can neither steal nor add seconds.
   function resume(){
-    if (!state || !state.running || state.active || state.countdown) return;
+    if (!state || !state.running || state.active || state.countdown || state.phase !== 'playing') return;
     state.active = true;
     if (state.firstStart){
       // Two seeds already on the way, so the first seconds are not empty.
@@ -605,27 +719,31 @@
   playfield.addEventListener('pointercancel', endDrag);
   playfield.addEventListener('lostpointercapture', endDrag);
 
+  // ---- Spawning ----
+  function ramp(pair, t){ return pair[0] + pair[1] * t; }
+
   function scheduleSpawn(){
     if (!state || !state.active) return;
-    var elapsed = CONFIG.gameTime - state.timeLeft;
-    var type = pickType(elapsed), x = Math.random() * (state.fieldW - ITEM);
-    spawnAt(type, x, -40);
-    // Often a topping or bomb falls right next to a seed, so blindly chasing seeds gets punished.
-    if (type === 'seed' && Math.random() < 0.25 + elapsed*0.008){
-      var side = x < ITEM*2 ? 1 : (x > state.fieldW - ITEM*3 ? -1 : (Math.random() < 0.5 ? -1 : 1));
-      var cx = Math.max(0, Math.min(state.fieldW - ITEM, x + side * (42 + Math.random()*18)));
-      spawnAt(Math.random() < 0.3 ? 'bomb' : DECOYS[Math.floor(Math.random()*DECOYS.length)], cx, -40 - Math.random()*40);
+    var L = lvl(), elapsed = L.time - state.timeLeft;
+    var x = Math.random() * (state.fieldW - ITEM);
+    var type;
+    if (Math.random() < POWERUP_CHANCE){
+      var ups = ['pu-pot', 'pu-shield'];
+      if (state.lives < 3) ups.push('pu-heart');
+      type = 'pu ' + ups[Math.floor(Math.random()*ups.length)];
+    } else if (Math.random() < ramp(L.hazard, elapsed)){
+      type = Math.random() < L.bombShare ? 'bomb' : DECOYS[Math.floor(Math.random()*DECOYS.length)];
+    } else {
+      type = Math.random() < GOLD_CHANCE ? 'gold' : 'seed';
+      // Often a topping or bomb falls right next to a seed, so blindly chasing seeds gets punished.
+      if (Math.random() < ramp(L.companion, elapsed)){
+        var side = x < ITEM*2 ? 1 : (x > state.fieldW - ITEM*3 ? -1 : (Math.random() < 0.5 ? -1 : 1));
+        var cx = Math.max(0, Math.min(state.fieldW - ITEM, x + side * (42 + Math.random()*18)));
+        spawnAt(Math.random() < L.bombShare ? 'bomb' : DECOYS[Math.floor(Math.random()*DECOYS.length)], cx, -40 - Math.random()*40);
+      }
     }
-    spawnTimeoutId = setTimeout(scheduleSpawn, Math.max(260, 700 - elapsed*16));
-  }
-
-  // Share of things to avoid grows from 30% to ~57% over the round;
-  // about a third of them are bombs, the rest are decoy toppings.
-  var DECOYS = ['mit', 'nhan', 'thach'];
-  function pickType(elapsed){
-    if (Math.random() >= 0.30 + elapsed*0.009) return 'seed';
-    if (Math.random() < 0.33) return 'bomb';
-    return DECOYS[Math.floor(Math.random() * DECOYS.length)];
+    spawnAt(type, x, -40);
+    spawnTimeoutId = setTimeout(scheduleSpawn, Math.max(L.spawn[2], L.spawn[0] - elapsed*L.spawn[1]));
   }
 
   function spawnAt(type, x, y){
@@ -633,24 +751,32 @@
     el.className = 'falling ' + type;
     el.style.transform = 'translate(' + x + 'px,' + y + 'px)';
     playfield.appendChild(el);
-    state.items.push({ el:el, x:x, y:y, type:type });
+    var kind = type.indexOf('pu ') === 0 ? type.slice(3) : type;
+    state.items.push({ el:el, x:x, y:y, type:kind });
   }
 
+  // ---- Main loop ----
   function loop(){
     if (!state || !state.active) return;
     var now = performance.now();
     var dt = Math.min(0.05, (now - lastTick) / 1000);
     lastTick = now;
+    var L = lvl();
 
     state.timeLeft -= dt;
-    if (state.timeLeft <= 0){ state.timeLeft = 0; updateHud(); endGame(); return; }
+    if (state.timeLeft <= 0){ state.timeLeft = 0; updateHud(); endGame('time'); return; }
+    if (state.x2Left > 0) state.x2Left = Math.max(0, state.x2Left - dt);
+    if (state.potLeft > 0) state.potLeft = Math.max(0, state.potLeft - dt);
+    aura.style.display = state.potLeft > 0 ? 'block' : 'none';
 
-    var elapsed = CONFIG.gameTime - state.timeLeft;
-    var step = (210 + elapsed * 8) * dt; // px this tick, faster over time
+    var elapsed = L.time - state.timeLeft;
+    if (L.boss) moveBoss(dt, L);
 
-    // catch zone = upper 60% of the character (head/hands), not the feet
+    var step = ramp(L.speed, elapsed) * dt; // px this tick, faster over time
+    // catch zone = upper 60% of the character (head/hands), wider with the big pot
+    var wide = state.potLeft > 0 ? 26 : 0;
     var top = state.playerTop, bottom = state.playerTop + PLAYER_H * 0.6;
-    var left = state.playerX + 10, right = state.playerX + PLAYER_W - 10;
+    var left = state.playerX + 10 - wide, right = state.playerX + PLAYER_W - 10 + wide;
 
     for (var i = state.items.length - 1; i >= 0; i--){
       var it = state.items[i];
@@ -658,15 +784,29 @@
       it.el.style.transform = 'translate(' + it.x + 'px,' + it.y + 'px)';
       if (it.y + ITEM > top && it.y < bottom && it.x + ITEM > left && it.x < right){
         removeItem(i);
-        if (it.type === 'seed') catchSeed(it);
-        else if (it.type === 'bomb') hitBomb(it);
-        else catchDecoy(it);
-        if (!state.running) return;
+        catchItem(it);
+        if (!state.running || state.phase !== 'playing') return;
       } else if (it.y > state.fieldH){
         removeItem(i);
       }
     }
     updateHud();
+  }
+
+  function moveBoss(dt, L){
+    state.bossX += state.bossDir * L.bossSpeed * dt;
+    if (state.bossX <= 0){ state.bossX = 0; state.bossDir = 1; }
+    if (state.bossX >= state.fieldW - BOSS_W){ state.bossX = state.fieldW - BOSS_W; state.bossDir = -1; }
+    boss.style.left = state.bossX + 'px';
+    state.bossThrowLeft -= dt;
+    if (state.bossThrowLeft <= 0){
+      // weaker boss throws faster
+      var hpShare = state.bossHP / L.bossHP;
+      state.bossThrowLeft = L.bossThrow[1] + (L.bossThrow[0] - L.bossThrow[1]) * hpShare;
+      var bx = Math.max(0, Math.min(state.fieldW - ITEM, state.bossX + BOSS_W/2 - ITEM/2 + (Math.random()*40 - 20)));
+      spawnAt(Math.random() < 0.4 ? 'bomb' : 'chem', bx, BOSS_H - 20);
+      beep(300, 60, 'triangle', 0.03);
+    }
   }
 
   function removeItem(i){
@@ -675,73 +815,182 @@
     state.items.splice(i, 1);
   }
   function clearItems(){
+    if (!state) return;
     state.items.forEach(function(it){ if (it.el.parentNode) it.el.parentNode.removeChild(it.el); });
     state.items = [];
+    Array.prototype.forEach.call(playfield.querySelectorAll('.pop,.shot'), function(n){ n.parentNode.removeChild(n); });
   }
 
-  function popText(it, text, minus){
+  function popText(x, y, text, cls){
     var p = document.createElement('div');
-    p.className = 'pop' + (minus ? ' minus' : ''); p.textContent = text;
-    p.style.transform = 'translate(' + it.x + 'px,' + (state.playerTop - 24) + 'px)';
+    p.className = 'pop' + (cls ? ' ' + cls : ''); p.textContent = text;
+    p.style.transform = 'translate(' + Math.max(0, Math.min(state.fieldW - 60, x)) + 'px,' + y + 'px)';
     playfield.appendChild(p);
-    setTimeout(function(){ if (p.parentNode) p.parentNode.removeChild(p); }, 520);
+    setTimeout(function(){ if (p.parentNode) p.parentNode.removeChild(p); }, 620);
   }
 
-  function catchSeed(it){
-    state.score += 1;
-    beep(880, 60, 'sine', 0.08);
-    popText(it, '+1', false);
-    player.classList.add('squash');
-    setTimeout(function(){ player.classList.remove('squash'); }, 100);
-  }
-
-  function catchDecoy(it){
-    state.score = Math.max(0, state.score - 2);
-    beep(260, 120, 'sawtooth', 0.05);
-    vibrate(40);
-    popText(it, '−2', true);
+  function catchItem(it){
+    var L = lvl(), headY = state.playerTop - 24;
+    if (it.type === 'seed' || it.type === 'gold'){
+      var mult = state.x2Left > 0 ? 2 : 1;
+      var gain = (it.type === 'gold' ? 5 : 1) * mult;
+      state.score += gain;
+      state.combo += 1;
+      if (state.combo >= COMBO_NEED){
+        state.combo = 0;
+        state.x2Left = COMBO_SECONDS;
+        popText(it.x - 20, headY - 26, 'COMBO x2!', 'info');
+        beep(1200, 90, 'sine', 0.07);
+      }
+      beep(it.type === 'gold' ? 1320 : 880, 60, 'sine', 0.08);
+      popText(it.x, headY, '+' + gain);
+      player.classList.add('squash');
+      setTimeout(function(){ player.classList.remove('squash'); }, 100);
+      // Combo and gold boost the score only; level progress / boss damage counts seeds (gold = 2).
+      var seeds = it.type === 'gold' ? 2 : 1;
+      if (L.boss){
+        hitBoss(seeds);
+      } else {
+        state.progress += seeds;
+        if (state.progress >= L.goal) levelClear();
+      }
+      return;
+    }
+    if (BAD[it.type]){
+      state.combo = 0;
+      if (it.type === 'bomb'){ hitBomb(it); return; }
+      state.score = Math.max(0, state.score - 2);
+      if (L.boss){
+        state.bossHP = Math.min(L.bossHP, state.bossHP + 2); // preservatives make him stronger
+        popText(state.bossX + 30, BOSS_H, '+2 máu', 'minus');
+      } else {
+        state.progress = Math.max(0, state.progress - 2);
+      }
+      beep(260, 120, 'sawtooth', 0.05);
+      vibrate(40);
+      popText(it.x, headY, '−2', 'minus');
+      return;
+    }
+    // power-ups
+    beep(1000, 80, 'triangle', 0.07);
+    if (it.type === 'pu-pot'){ state.potLeft = POT_SECONDS; popText(it.x - 20, headY, '🍲 Nồi to!', 'info'); }
+    else if (it.type === 'pu-shield'){ state.shield = true; popText(it.x - 20, headY, '🛡️ Có khiên!', 'info'); }
+    else if (it.type === 'pu-heart'){ state.lives = Math.min(3, state.lives + 1); popText(it.x - 20, headY, '❤️ +1 tim', 'info'); }
   }
 
   function hitBomb(it){
-    state.score = Math.max(0, state.score - 3);
+    var headY = state.playerTop - 24;
+    if (state.shield){
+      state.shield = false;
+      popText(it.x - 20, headY, '🛡️ Chặn!', 'info');
+      beep(600, 120, 'square', 0.05);
+      return;
+    }
     state.lives -= 1;
-    popText(it, '−3', true);
+    state.score = Math.max(0, state.score - 3);
+    if (!lvl().boss) state.progress = Math.max(0, state.progress - 3);
+    popText(it.x, headY, '−3', 'minus');
     beep(150, 180, 'square', 0.07);
     vibrate(120);
     var g = screens.game;
     g.classList.remove('shake'); void g.offsetWidth; g.classList.add('shake');
     flashEl.classList.add('on');
     setTimeout(function(){ flashEl.classList.remove('on'); }, 150);
-    updateHud(); // show the lost heart (and score) even when this ends the game
-    if (state.lives <= 0){ state.endedByLives = true; endGame(); }
+    updateHud(); // show the lost heart even when this ends the game
+    if (state.lives <= 0) endGame('lives');
+  }
+
+  function hitBoss(dmg){
+    // a seed flies from Chồng Đác up to the boss
+    var s = document.createElement('div');
+    s.className = 'shot seed';
+    var sx = state.playerX + PLAYER_W/2 - 8, sy = state.playerTop - 10;
+    s.style.transform = 'translate(' + sx + 'px,' + sy + 'px)';
+    playfield.appendChild(s);
+    var tx = state.bossX + BOSS_W/2 - 8, ty = BOSS_H/2;
+    requestAnimationFrame(function(){ s.style.transform = 'translate(' + tx + 'px,' + ty + 'px)'; });
+    setTimeout(function(){ if (s.parentNode) s.parentNode.removeChild(s); }, 280);
+
+    state.bossHP = Math.max(0, state.bossHP - dmg);
+    boss.classList.add('hit');
+    setTimeout(function(){ boss.classList.remove('hit'); }, 120);
+    popText(state.bossX + 40, BOSS_H - 10, '−' + dmg, 'minus');
+    if (state.bossHP <= 0) levelClear();
+  }
+
+  function levelClear(){
+    pause();
+    state.phase = 'between';
+    state.levelsCleared = state.level + 1;
+    dragHint.style.display = 'none';
+    clearItems();
+    updateHud(true);
+    beep(660, 120, 'triangle', 0.08); setTimeout(function(){ beep(990, 200, 'triangle', 0.08); }, 130);
+    if (state.levelsCleared >= LEVELS.length){
+      rescue();
+      return;
+    }
+    var next = LEVELS[state.level + 1];
+    setText($('between-title'), 'Qua màn ' + (state.level + 1) + '! 🎉');
+    setText($('between-text'), state.levelsCleared === 2
+      ? 'Bạn đã giữ chắc quà tặng topping! Màn cuối: đánh bại Chúa Tể Chất Bảo Quản để cứu Vợ Chè.'
+      : 'Tiếp theo: ' + next.name + '. Cẩn thận, có bom rồi đó!');
+    $('between').style.display = 'flex';
+  }
+  $('btn-next').addEventListener('click', function(){
+    if (!state || state.phase !== 'between') return;
+    startLevel(state.level + 1);
+  });
+
+  function rescue(){
+    boss.style.display = 'none';
+    var r = $('rescue'), cage = $('rescue-cage');
+    cage.classList.remove('open');
+    r.style.display = 'flex';
+    setTimeout(function(){ cage.classList.add('open'); beep(880, 300, 'triangle', 0.08); }, 600);
+    setTimeout(function(){ r.style.display = 'none'; endGame('win'); }, 2600);
   }
 
   // Only touch the DOM when something changed.
   function updateHud(){
-    var t = Math.ceil(state.timeLeft);
-    var key = state.lives + '|' + t + '|' + state.score;
-    if (key === state.hud) return;
-    state.hud = key;
+    var L = lvl();
     var lives = Math.max(0, state.lives);
-    heartsEl.textContent = '❤️'.repeat(lives) + '🤍'.repeat(3 - lives);
-    timerEl.textContent = t + 's';
-    timerEl.classList.toggle('hurry', t <= 5 && state.running);
-    scoreEl.innerHTML = '<i class="mini-seed"></i>' + state.score;
+    setText(heartsEl, '❤️'.repeat(lives) + '🤍'.repeat(Math.max(0, 3 - lives)));
+    var t = Math.ceil(state.timeLeft);
+    setText(timerEl, t + 's');
+    timerEl.classList.toggle('hurry', t <= 5 && state.phase === 'playing');
+    if (scoreEl._v !== state.score){ scoreEl._v = state.score; scoreEl.innerHTML = '<i class="seed"></i>' + state.score; }
+    setText(levelLabel, 'Màn ' + (state.level + 1));
+    var pct, txt;
+    if (L.boss){ pct = state.bossHP / L.bossHP; txt = 'Trùm ' + state.bossHP + '/' + L.bossHP; }
+    else { pct = Math.min(1, state.progress / L.goal); txt = Math.min(state.progress, L.goal) + '/' + L.goal + ' hạt'; }
+    var w = Math.round(pct * 100) + '%';
+    if (barFill._w !== w){ barFill._w = w; barFill.style.width = w; }
+    setText(barText, txt);
+    var b = (state.x2Left > 0 ? 'x2 ' : '') + (state.potLeft > 0 ? '🍲' : '') + (state.shield ? '🛡️' : '');
+    if (buffsEl._v !== b){ buffsEl._v = b; buffsEl.innerHTML = (state.x2Left > 0 ? '<span class="x2">x2</span> ' : '') + (state.potLeft > 0 ? '🍲' : '') + (state.shield ? '🛡️' : ''); }
+    shieldEl.style.display = state.shield ? 'block' : 'none';
   }
 
-  function endGame(){
+  function endGame(reason){
     if (!state || !state.running) return; // never end (and issue a code) twice
     state.running = false;
     state.active = false;
+    state.phase = 'over';
+    state.endReason = reason;
     dragId = null;
     clearTimeout(spawnTimeoutId);
     clearInterval(loopId);
     timerEl.classList.remove('hurry');
     dragHint.style.display = 'none';
+    levelCard.style.display = 'none';
 
     var today = state.playDate;
-    var tier = state.score >= CONFIG.discountAt ? 2 : (state.score >= CONFIG.toppingAt ? 1 : 0);
-    var r = { date:today, score:state.score, tier:tier, char:state.char, endedByLives:state.endedByLives,
+    // Prize by story progress: past level 2 → topping, boss beaten → discount.
+    var tier = state.levelsCleared >= 3 ? 2 : (state.levelsCleared >= 2 ? 1 : 0);
+    var r = { date:today, score:state.score, tier:tier, char:state.char, outcome:reason,
+              reached:Math.min(state.level + 1, LEVELS.length), cleared:state.levelsCleared,
+              endedByLives: reason === 'lives',
               code:null, validFrom:null, validTo:null, app:appName(), capped:false };
     if (tier && activeVouchers().length >= CONFIG.maxVouchers){
       r.capped = true; // already holding the maximum of unused codes: no new one
@@ -762,9 +1011,10 @@
     }
     saveJSON(LAST_KEY, r); // saved before the pause below, so a reload keeps the result
 
-    // A short "time's up" beat before the result screen (also swallows stray drag taps).
-    beep(tier ? 660 : 330, 250, 'triangle', 0.08);
-    countdownEl.textContent = state.endedByLives ? 'Hết tim!' : 'Hết giờ!';
+    if (reason === 'win'){ clearItems(); refreshBanners(); renderResult(r); return; }
+    // A short "game over" beat before the result screen (also swallows stray drag taps).
+    beep(330, 250, 'triangle', 0.08);
+    countdownEl.textContent = reason === 'lives' ? 'Hết tim!' : 'Hết giờ!';
     setTimeout(function(){
       countdownEl.textContent = '';
       clearItems();
@@ -775,20 +1025,18 @@
 
   // ---- Result ----
   function renderResult(r){
-    $('result-img').src = spriteSrc(r.char);
+    var win = r.tier === 2 || r.outcome === 'win';
+    $('result-img').src = win ? 'assets/vo-che-sprite.png' : 'assets/chong-dac-sprite.png';
     var title, msg;
     if (r.tier && r.capped){
-      title = 'Giỏi quá! 🎉';
-      msg = 'Bạn đang giữ đủ ' + CONFIG.maxVouchers + ' mã chưa dùng — ghé HAMICHEE dùng bớt rồi hứng thêm quà nha!';
+      title = win ? 'Cứu được Vợ Chè! 🏆' : 'Giỏi quá! 🎉';
+      msg = 'Bạn đang giữ đủ ' + CONFIG.maxVouchers + ' mã chưa dùng — ghé HAMICHEE dùng bớt rồi nhận thêm quà nha!';
     }
-    else if (r.tier === 2){ title = 'Quà xịn hẹn gặp lại! 🏆'; msg = 'Lần ghé sau bạn được giảm 10% hóa đơn'; }
-    else if (r.tier === 1){ title = 'Quà hẹn gặp lại! 🎁'; msg = 'Lần ghé sau bạn được tặng 1 topping'; }
+    else if (r.tier === 2){ title = 'Cứu được Vợ Chè! 🏆'; msg = 'Lần ghé sau bạn được giảm 10% hóa đơn'; }
+    else if (r.tier === 1){ title = 'Suýt cứu được vợ! 🎁'; msg = 'Qua được 2 màn — lần ghé sau bạn được tặng 1 topping'; }
     else {
-      var missing = CONFIG.toppingAt - r.score;
-      var near = missing <= 5;
-      title = r.endedByLives ? 'Hết tim rồi! 💔' : (near ? 'Suýt nữa rồi! 😆' : 'Khởi động vậy là ổn rồi!');
-      msg = near ? 'Chỉ thiếu ' + missing + ' hạt nữa là có quà! Mai ghé HAMICHEE hứng tiếp nha!'
-                 : 'Mai ghé HAMICHEE hứng tiếp nha!';
+      title = r.outcome === 'lives' || r.endedByLives ? 'Hết tim rồi! 💔' : 'Hết giờ rồi! ⏰';
+      msg = 'Bạn đã tới màn ' + (r.reached || 1) + '. Qua màn 2 là có quà — mai ghé HAMICHEE cứu Vợ Chè tiếp nha!';
     }
     $('result-title').textContent = title;
     $('result-score').textContent = r.score;
@@ -894,7 +1142,7 @@
     var t = todayStr();
     if (t === homeDate) return;
     homeDate = t;
-    if (isShown('locked') || isShown('result') || isShown('select')) goHome();
+    if (isShown('locked') || isShown('result') || isShown('home')) goHome();
   }
   setInterval(function(){ tickClock(); checkDay(); }, 1000);
 
@@ -903,7 +1151,7 @@
     if (e.key !== VOUCHER_KEY && e.key !== LOCK_KEY) return;
     if (isShown('vouchers')) renderVouchers();
     refreshBanners();
-    if (e.key === LOCK_KEY && isShown('select')) goHome();
+    if (e.key === LOCK_KEY && isShown('home')) goHome();
   });
 
   // ---- Startup ----
