@@ -236,6 +236,13 @@
   #zalo-btn{ display:none; text-decoration:none; }
   .brag{ font-size:13px; color:#666; margin-top:6px; }
   #btn-challenge{ margin-top:8px; background:var(--orange); box-shadow:0 4px 0 #c7801a; }
+  #cutscene{ display:none; position:absolute; inset:0; z-index:25; background:#000; align-items:center; justify-content:center; }
+  #cutscene.on{ display:flex; }
+  #cutscene video{ display:none; width:100%; height:100%; object-fit:contain; background:#000; }
+  .cs-btn{ position:absolute; bottom:calc(18px + env(safe-area-inset-bottom)); background:rgba(0,0,0,.55); color:#fff;
+           border:1.5px solid rgba(255,255,255,.75); border-radius:18px; padding:8px 16px; font-size:14px; font-weight:bold; cursor:pointer; }
+  #cs-skip{ right:14px; }
+  #cs-sound{ left:14px; }
   #share-sheet{
     display:none; position:absolute; inset:0; z-index:20; background:rgba(20,30,20,.72);
     align-items:center; justify-content:center; padding:16px;
@@ -496,6 +503,14 @@
     <button type="button" class="btn-soft js-top">🏆 Bảng vàng hôm nay</button>
     <div class="brag" id="brag"></div>
     <div class="brand">HAMICHEE · Chè hạt đác Khánh Hòa · vị nhà mát lành</div>
+  </div>
+
+  <!-- Cutscenes: Google Flow clips (intro before the story, rescue after beating the boss) -->
+  <div id="cutscene">
+    <video id="cs-intro" src="assets/clip-intro.mp4" poster="assets/clip-intro.jpg" playsinline webkit-playsinline preload="auto"></video>
+    <video id="cs-rescue" src="assets/clip-rescue.mp4" poster="assets/clip-rescue.jpg" playsinline webkit-playsinline preload="none"></video>
+    <button type="button" class="cs-btn" id="cs-sound" hidden>🔊 Bật tiếng</button>
+    <button type="button" class="cs-btn" id="cs-skip">Bỏ qua ▶</button>
   </div>
 
   <!-- Challenge image (fallback when the phone cannot share files) -->
@@ -886,19 +901,67 @@
     if (starting) return;
     starting = true;
     initAudio(); // must run inside the tap, before waiting
+    // The intro clip starts inside the tap too, so phones allow its sound.
+    stopMusic();
+    playCutscene('intro', function(){ if (isShown('story')) playMusic('forest'); });
     // Wait for the clock check (normally already done), at most 2.5s.
     Promise.race([clockCheck, new Promise(function(r){ setTimeout(r, 2500); })]).then(function(){
       starting = false;
-      if (clockState === 'bad'){ show('clock'); return; }
-      if (load(LOCK_KEY) === todayStr()){ goHome(); return; } // another tab played meanwhile
+      if (clockState === 'bad'){ abortCutscene(); show('clock'); return; }
+      if (load(LOCK_KEY) === todayStr()){ abortCutscene(); goHome(); return; } // another tab played meanwhile
       // Lock as soon as a play starts: reloading mid-game gives no free retry.
       store(LOCK_KEY, todayStr());
       recordWeekPlay(todayStr());
       show('story');
-      switchMusic('forest');
+      music.name = 'forest';
+      if (!cs.vid) playMusic('forest'); // no clip (failed to load): music straight away
     });
   });
   $('btn-go').addEventListener('click', function(){ wakeAudio(); startGame(); });
+
+  // ---- Cutscenes: 10-second Google Flow clips, skippable ----
+  var CLIPS = { intro:$('cs-intro'), rescue:$('cs-rescue') };
+  var cs = { vid:null, done:null, timer:null };
+  function playCutscene(name, done){
+    var v = CLIPS[name];
+    if (!v || v.error){ if (done) done(); return; }
+    cs.vid = v; cs.done = done || null;
+    for (var k in CLIPS) CLIPS[k].style.display = CLIPS[k] === v ? 'block' : 'none';
+    $('cs-sound').hidden = true;
+    $('cutscene').classList.add('on');
+    clearTimeout(cs.timer);
+    cs.timer = setTimeout(closeCutscene, 20000); // slow network: never trap the player
+    try { v.currentTime = 0; } catch(e){}
+    v.muted = muted;
+    var p = v.play();
+    if (p && p.catch) p.catch(function(){
+      if (cs.vid !== v) return;
+      // The phone blocked sound: play silently and offer a button.
+      v.muted = true;
+      if (!muted) $('cs-sound').hidden = false;
+      var p2 = v.play();
+      if (p2 && p2.catch) p2.catch(function(){ if (cs.vid === v) closeCutscene(); });
+    });
+  }
+  function closeCutscene(){
+    if (!cs.vid) return;
+    var v = cs.vid, done = cs.done;
+    cs.vid = null; cs.done = null;
+    clearTimeout(cs.timer);
+    try { v.pause(); } catch(e){}
+    $('cutscene').classList.remove('on');
+    if (done) done();
+  }
+  function abortCutscene(){ cs.done = null; closeCutscene(); }
+  Object.keys(CLIPS).forEach(function(k){
+    CLIPS[k].addEventListener('ended', function(){ if (cs.vid === CLIPS[k]) closeCutscene(); });
+    CLIPS[k].addEventListener('error', function(){ if (cs.vid === CLIPS[k]) closeCutscene(); });
+  });
+  $('cs-skip').addEventListener('click', closeCutscene);
+  $('cs-sound').addEventListener('click', function(){
+    this.hidden = true;
+    if (cs.vid){ cs.vid.muted = false; var p = cs.vid.play(); if (p && p.catch) p.catch(function(){}); }
+  });
 
   $('btn-clock-retry').addEventListener('click', function(){
     clockCheck = checkClock();
@@ -1100,6 +1163,7 @@
     $('between').style.display = 'none';
     playfield.style.background = 'linear-gradient(' + L.sky + ', var(--cream) 72%)';
     $('scenery').innerHTML = scene(i);
+    if (L.boss && CLIPS.rescue.preload !== 'auto') CLIPS.rescue.preload = 'auto'; // fetch the rescue clip during the boss fight
     boss.style.display = L.boss ? 'block' : 'none';
     state.bossX = (playfield.clientWidth - BOSS_W) / 2;
     boss.style.left = state.bossX + 'px';
@@ -1164,10 +1228,11 @@
     clearInterval(loopId);
   }
   document.addEventListener('visibilitychange', function(){
-    if (document.hidden){ pause(); stopMusic(); }
+    if (document.hidden){ pause(); stopMusic(); if (cs.vid) cs.vid.pause(); }
     else {
       wakeAudio();
       resume();
+      if (cs.vid){ var cp = cs.vid.play(); if (cp && cp.catch) cp.catch(function(){}); }
       if (isShown('story')) playMusic(music.name);
       if (!state || !state.running) clockCheck = checkClock(); // customer may have fixed the phone clock
       checkDay();
@@ -1427,6 +1492,11 @@
 
   function rescue(){
     boss.style.display = 'none';
+    if (CLIPS.rescue && !CLIPS.rescue.error){
+      endGame('win');            // save the result (and code) first; it waits under the clip
+      playCutscene('rescue');
+      return;
+    }
     var r = $('rescue'), cage = $('rescue-cage');
     cage.classList.remove('open');
     r.style.display = 'flex';
