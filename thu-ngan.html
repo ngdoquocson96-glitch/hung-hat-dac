@@ -67,7 +67,7 @@
     <!-- Look up a code -->
     <form class="card" id="code-box" autocomplete="off">
       <label for="code">Mã khách đưa</label>
-      <input id="code" maxlength="12" placeholder="G2709-548" autocapitalize="characters">
+      <input id="code" maxlength="12" placeholder="G2709-548" autocapitalize="characters" autocomplete="off">
       <button class="btn big" type="submit" id="check-btn">Tra mã</button>
       <div class="msg" id="code-msg"></div>
     </form>
@@ -80,7 +80,7 @@
 
     <div class="card">
       <ol class="rules">
-        <li><b>T</b> = tặng 1 topping · <b>G</b> = giảm 10% (tối đa 10.000đ, hóa đơn từ 40.000đ).</li>
+        <li><b>T</b> = tặng 1 topping · <b>W</b> = quà nhiệm vụ tuần, tặng 1 topping · <b>G</b> = giảm 10% (tối đa 10.000đ, hóa đơn từ 40.000đ).</li>
         <li>Chỉ áp cho đơn đang gọi, <b>trước khi thanh toán</b>. 1 mã/hóa đơn, không cộng dồn.</li>
         <li>Chỉ bấm "Xác nhận đã dùng" khi đã áp ưu đãi trên iPOS.</li>
       </ol>
@@ -109,12 +109,17 @@
   function getPin(){ if (pinMem) return pinMem; try { return sessionStorage.getItem(PIN_KEY) || ''; } catch(e){ return ''; } }
   function setPin(v){ pinMem = v || ''; try { if (v) sessionStorage.setItem(PIN_KEY, v); else sessionStorage.removeItem(PIN_KEY); } catch(e){} }
 
-  function call(payload){
+  // Google now and then turns the POST into a GET (nothing is done): send it once more.
+  function call(payload, retried){
     return Promise.race([
       fetch(API, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body:JSON.stringify(payload) })
-        .then(function(r){ return r.json(); }),
+        .then(function(r){ return r.json(); })
+        .catch(function(){ return { reason:'retry' }; }),
       new Promise(function(res){ setTimeout(function(){ res(null); }, 15000); })
-    ]).catch(function(){ return null; });
+    ]).then(function(res){
+      if (res && res.reason === 'retry') return retried ? null : call(payload, true);
+      return res;
+    });
   }
 
   function showWork(on){
@@ -183,7 +188,7 @@
   $('code-box').addEventListener('submit', function(e){
     e.preventDefault();
     var code = $('code').value.trim().toUpperCase();
-    if (!/^[TG]\d{4}-\d{3}$/.test(code)){ $('code-msg').textContent = 'Mã có dạng T2709-548 hoặc G2709-548.'; $('result').className = ''; return; }
+    if (!/^[TGW]\d{4}-\d{3}$/.test(code)){ $('code-msg').textContent = 'Mã có dạng T2709-548, G2709-548 hoặc W2709-548.'; $('result').className = ''; return; }
     $('code-msg').textContent = ''; $('check-btn').disabled = true; $('check-btn').textContent = 'Đang tra…';
     call({ action:'check', code:code, pin:getPin() }).then(function(res){
       $('check-btn').disabled = false; $('check-btn').textContent = 'Tra mã';

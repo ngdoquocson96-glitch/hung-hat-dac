@@ -306,6 +306,48 @@
   #rc-msg.err{ color:var(--red); }
   #rc-submit{ align-self:center; margin-top:4px; }
 
+  /* ---- Weekly mission ---- */
+  .week-btn{ display:none; background:#fff; border:2px dashed var(--orange); color:#8a5a12; border-radius:14px; padding:8px 14px; font-size:13.5px; font-weight:bold; cursor:pointer; }
+  .week-btn.done{ background:var(--yellow); border-style:solid; color:var(--green-dark); animation:pulse .7s infinite alternate; }
+  #screen-week, #screen-top{ align-items:center; justify-content:flex-start; text-align:center; padding:20px 18px 16px; gap:10px; overflow-y:auto; }
+  #screen-week h2, #screen-top h2{ color:var(--green); margin:0; font-size:22px; }
+  .wk-goal{ margin:0; font-size:14px; color:#333; max-width:330px; line-height:1.5; }
+  #wk-days{ display:flex; gap:6px; }
+  .wk-day{ width:38px; display:flex; flex-direction:column; align-items:center; gap:3px; font-size:11px; font-weight:bold; color:#777; }
+  .wk-day i{ width:30px; height:30px; border-radius:50%; border:2px dashed #cdbfa9; background:#fff; }
+  .wk-day.on i{ border:2px solid #8a6a22; background:radial-gradient(circle at 35% 30%, #ffffff, #fbf6e6 55%, #e6cf8f); }
+  .wk-day.today{ color:var(--green-dark); }
+  #wk-status{ font-size:15px; font-weight:bold; color:var(--orange); max-width:330px; }
+  #wk-prize{ display:none; flex-direction:column; align-items:center; gap:6px; }
+  #wk-range{ font-size:14px; font-weight:bold; color:var(--orange); }
+
+  /* ---- Daily leaderboard ---- */
+  #top-sub{ font-size:13px; color:#666; }
+  #top-list{ list-style:none; margin:0; padding:0; width:100%; max-width:340px; display:flex; flex-direction:column; gap:6px; }
+  #top-list li, #top-me .row{ display:flex; align-items:center; gap:10px; background:#fff; border-radius:12px; padding:8px 12px; font-size:15px; }
+  #top-list li.me, #top-me .row{ border:2px solid var(--orange); }
+  .t-rank{ width:30px; font-weight:bold; color:var(--green-dark); font-size:17px; }
+  .t-name{ flex:1; text-align:left; font-weight:bold; color:#333; }
+  .t-score{ font-weight:bold; color:var(--orange); }
+  #top-me{ width:100%; max-width:340px; }
+  .top-note{ margin:0; font-size:12px; color:#666; max-width:320px; }
+
+  /* ---- 20/10 look (CONFIG.theme2010, or ?theme=2010 to preview) ---- */
+  .t2010-ribbon, .t2010-only, .petals{ display:none; }
+  .t2010 .t2010-ribbon{ display:block; background:#e0457b; color:#fff; font-weight:bold; font-size:13px; padding:6px 14px; border-radius:16px; }
+  .t2010 .t2010-only{ display:block; color:#ffc2d6; font-weight:bold; }
+  .t2010 #screen-home{ background:linear-gradient(#ffe0ea, var(--cream) 55%); }
+  .t2010 #screen-home h1, .t2010 #result-title, .t2010 #rescue-title{ color:#d6336c; }
+  .t2010 #btn-start{ background:#e0457b; box-shadow:0 4px 0 #a52a58; }
+  .t2010 #screen-story{ background:linear-gradient(#5a2a4f, #2a1a2e); }
+  .t2010 #screen-result{ position:relative; }
+  .t2010 .petals{ display:block; position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:0; }
+  .t2010 #screen-home > :not(.petals), .t2010 #screen-result > :not(.petals){ position:relative; z-index:1; }
+  .t2010 #screen-home > .home-mute{ position:absolute; z-index:2; }
+  .petals span{ position:absolute; top:-30px; font-size:18px; opacity:.75; animation:petal linear infinite; }
+  @keyframes petal{ from{ transform:translate(0,0) rotate(0); } to{ transform:translate(40px, 110vh) rotate(300deg); } }
+  @media (prefers-reduced-motion: reduce){ .petals span{ animation:none; display:none; } .week-btn.done{ animation:none; } }
+
   .center-screen{ align-items:center; justify-content:center; text-align:center; padding:28px; gap:12px; }
   .center-screen h2{ color:var(--green); margin:0; }
 
@@ -336,13 +378,17 @@
     <h2>Hôm nay bạn đã chơi rồi 🌱</h2>
     <p>Mỗi ngày 1 lượt trên mỗi điện thoại. Hẹn bạn ngày mai ở HAMICHEE nha!</p>
     <button type="button" class="banner js-vouchers" id="locked-banner"></button>
+    <button type="button" class="week-btn js-week"></button>
+    <button type="button" class="btn-soft js-top">🏆 Bảng vàng hôm nay</button>
     <button type="button" class="link-btn js-recover">🔎 Lấy lại mã quà bằng số điện thoại</button>
   </div>
 
   <!-- Home -->
   <div id="screen-home" class="screen">
     <button type="button" class="mute-btn js-mute home-mute" aria-label="Tắt âm thanh">🔊</button>
+    <div class="petals" aria-hidden="true"></div>
     <h1>Giải Cứu Vợ Chè</h1>
+    <div class="t2010-ribbon">🌸 Mừng 20/10 · cứu vợ tặng chị em 🌸</div>
     <button type="button" class="banner js-vouchers" id="home-banner"></button>
     <div class="versus">
       <img class="hero fade-x" src="assets/chong-dac-sprite.png" alt="Chồng Đác">
@@ -358,6 +404,8 @@
       🎁 <span id="howto-prizes"></span>
     </div>
     <button type="button" class="btn-main" id="btn-start">Đi cứu Vợ Chè! ▶</button>
+    <button type="button" class="week-btn js-week"></button>
+    <button type="button" class="btn-soft js-top">🏆 Bảng vàng hôm nay</button>
     <button type="button" class="link-btn js-recover">🔎 Lấy lại mã quà bằng số điện thoại</button>
   </div>
 
@@ -370,6 +418,7 @@
     </div>
     <p>Chúa Tể Chất Bảo Quản ghét chè nấu mới mỗi ngày, nên bắt Vợ Chè nhốt vào hang.</p>
     <p>Chồng Đác phải hứng thật nhiều hạt đác để có sức mạnh đi cứu vợ!</p>
+    <p class="t2010-only">Sắp tới 20/10 rồi — Chồng Đác quyết cứu vợ về để tặng bó hoa thật to! 💐</p>
     <button type="button" class="btn-main" id="btn-go">Lên đường! ▶</button>
   </div>
 
@@ -403,7 +452,7 @@
         <button type="button" class="btn-main" id="btn-next">Màn tiếp theo ▶</button>
       </div>
       <div id="rescue">
-        <h2>Cứu được Vợ Chè rồi! 🎉</h2>
+        <h2 id="rescue-title">Cứu được Vợ Chè rồi! 🎉</h2>
         <div class="pair">
           <img class="hero fade-x" src="assets/chong-dac-sprite.png" alt="">
           <div class="cage" id="rescue-cage"><img class="fade-x" src="assets/vo-che-sprite.png" alt=""></div>
@@ -414,6 +463,7 @@
 
   <!-- Result -->
   <div id="screen-result" class="screen">
+    <div class="petals" aria-hidden="true"></div>
     <h2 id="result-title"></h2>
     <img id="result-img" class="fade-x" alt="">
     <div class="caught">Bạn hứng được</div>
@@ -443,7 +493,8 @@
       </select>
       <input id="su-place-other" maxlength="40" placeholder="Nhập tỉnh/thành của bạn" hidden>
       <label class="su-consent"><input type="checkbox" id="su-consent">
-        <span>Tôi đồng ý cho HAMICHEE lưu thông tin này để gửi ưu đãi và chăm sóc khách hàng. Thông tin chỉ dùng nội bộ, không chia sẻ cho bên thứ ba.</span></label>
+        <span>Tôi đồng ý cho HAMICHEE lưu thông tin này để gửi ưu đãi và chăm sóc khách hàng. Thông tin chỉ dùng nội bộ, không chia sẻ cho bên thứ ba.
+          Riêng tên (không kèm họ) và 3 số cuối SĐT có thể hiện trên Bảng vàng hôm nay.</span></label>
       <div id="su-error"></div>
       <button type="submit" class="btn-main" id="su-submit">Nhận mã quà</button>
     </form>
@@ -456,6 +507,8 @@
     <button type="button" class="btn-soft js-vouchers" id="result-vouchers">🎁 Mã ưu đãi của tôi</button>
     <a class="btn-soft" id="zalo-btn" href="#" target="_blank" rel="noopener">💬 Quan tâm Zalo HAMICHEE để được nhắc mã</a>
     <button type="button" class="btn-main" id="btn-challenge">📣 Thách bạn bè</button>
+    <button type="button" class="week-btn js-week"></button>
+    <button type="button" class="btn-soft js-top">🏆 Bảng vàng hôm nay</button>
     <div class="brag" id="brag"></div>
     <div class="brand">HAMICHEE · Chè hạt đác Khánh Hòa · vị nhà mát lành</div>
   </div>
@@ -471,6 +524,31 @@
         <button type="button" class="btn-soft" id="ss-close">Đóng</button>
       </div>
     </div>
+  </div>
+
+  <!-- Daily leaderboard -->
+  <div id="screen-top" class="screen">
+    <h2>🏆 Bảng vàng hôm nay</h2>
+    <div id="top-sub"></div>
+    <ol id="top-list"></ol>
+    <div id="top-me"></div>
+    <p class="top-note">Chỉ tính người qua màn 2 và điền thông tin nhận quà. Bảng làm mới mỗi ngày.</p>
+    <button type="button" class="btn-soft" id="top-back">← Quay lại</button>
+  </div>
+
+  <!-- Weekly mission -->
+  <div id="screen-week" class="screen">
+    <h2>📅 Nhiệm vụ tuần</h2>
+    <p class="wk-goal">Chơi <b>3 ngày khác nhau</b> trong tuần (thứ 2 → chủ nhật) để nhận thêm <b>1 topping</b> cho lần ghé sau.</p>
+    <div id="wk-days"></div>
+    <div id="wk-status"></div>
+    <div id="wk-form-slot"></div>
+    <div id="wk-prize">
+      <div class="code small" id="wk-code"></div>
+      <div id="wk-range"></div>
+      <button type="button" class="btn-soft js-vouchers">🎁 Mã ưu đãi của tôi</button>
+    </div>
+    <button type="button" class="btn-soft" id="wk-back">← Quay lại</button>
   </div>
 
   <!-- My vouchers (what the cashier looks at) -->
@@ -508,7 +586,9 @@
     toppingText: 'Tặng 1 topping bất kỳ',
     discountText: 'Giảm 10% hóa đơn',
     discountTerms: 'tối đa 10.000đ, hóa đơn từ 40.000đ',
-    shop: 'HAMICHEE 41 Hoàng Hoa Thám'
+    shop: 'HAMICHEE 41 Hoàng Hoa Thám',
+    weekGoal: 3,         // nhiệm vụ tuần: chơi đủ N ngày khác nhau (thứ 2 → chủ nhật) → thêm 1 topping
+    theme2010: { from:'10-15', to:'10-20' } // giao diện 20/10 tự bật trong khoảng ngày này (tháng-ngày)
   };
 
   // ===== 3 MÀN CHƠI — chỉnh độ khó từng màn ở đây =====
@@ -572,15 +652,50 @@
   function activeVouchers(){
     return loadVouchers().filter(function(v){ var s = voucherStatus(v); return s === 'ok' || s === 'soon'; });
   }
+  // Weekly-mission codes (W…) are extra: they do not count toward the 3-code limit.
+  function isWeekCode(code){ return String(code || '').charAt(0) === 'W'; }
+  function capCount(){ return activeVouchers().filter(function(v){ return !isWeekCode(v.code); }).length; }
   function prizeText(tier){
     return tier === 2 ? CONFIG.discountText + ' (' + CONFIG.discountTerms + ')' : CONFIG.toppingText;
+  }
+  function voucherPrize(v){ return (isWeekCode(v.code) ? 'Nhiệm vụ tuần: ' : '') + prizeText(v.tier); }
+
+  // ---- 20/10 look ----
+  var THEME_2010 = (function(){
+    var md = todayStr().slice(5);
+    return /[?&]theme=2010\b/.test(location.search) || (md >= CONFIG.theme2010.from && md <= CONFIG.theme2010.to);
+  })();
+  var VO_CHE_SRC = 'assets/vo-che-sprite.png';
+  if (THEME_2010){
+    document.documentElement.classList.add('t2010');
+    // Optional Vợ Chè in áo dài: used only if assets/vo-che-2010.png has been uploaded.
+    var ad = new Image();
+    ad.onload = function(){
+      VO_CHE_SRC = 'assets/vo-che-2010.png';
+      Array.prototype.forEach.call(document.querySelectorAll('img[src="assets/vo-che-sprite.png"]'), function(im){ im.src = VO_CHE_SRC; });
+    };
+    ad.src = 'assets/vo-che-2010.png';
   }
 
   function $(id){ return document.getElementById(id); }
   var screens = {
     blocked:$('screen-blocked'), clock:$('screen-clock'), locked:$('screen-locked'), home:$('screen-home'),
-    story:$('screen-story'), game:$('screen-game'), result:$('screen-result'), vouchers:$('screen-vouchers')
+    story:$('screen-story'), game:$('screen-game'), result:$('screen-result'), vouchers:$('screen-vouchers'),
+    top:$('screen-top'), week:$('screen-week')
   };
+  if (THEME_2010){
+    $('rescue-title').textContent = 'Cứu được Vợ Chè rồi! 💐';
+    Array.prototype.forEach.call(document.querySelectorAll('.petals'), function(box){
+      for (var i = 0; i < 12; i++){
+        var p = document.createElement('span');
+        p.textContent = ['🌸', '🌷', '💗', '🌹'][i % 4];
+        p.style.left = (i * 8.3 + Math.random() * 4) + '%';
+        p.style.animationDuration = (7 + Math.random() * 6) + 's';
+        p.style.animationDelay = (-Math.random() * 12) + 's';
+        box.appendChild(p);
+      }
+    });
+  }
   function show(name){
     for (var k in screens) screens[k].classList.remove('active');
     screens[name].classList.add('active');
@@ -626,11 +741,12 @@
     ['home-banner','locked-banner'].forEach(function(id){
       var b = $(id);
       b.style.display = n ? 'inline-block' : 'none';
-      b.textContent = n >= CONFIG.maxVouchers
+      b.textContent = capCount() >= CONFIG.maxVouchers
         ? '🎁 Bạn đang có ' + n + ' mã (tối đa) — dùng bớt để nhận thêm quà'
         : '🎁 Bạn đang có ' + n + ' mã ưu đãi — bấm để xem';
     });
     $('result-vouchers').style.display = n ? '' : 'none';
+    refreshWeek();
   }
   function goHome(){
     var t = todayStr();
@@ -792,6 +908,7 @@
       if (load(LOCK_KEY) === todayStr()){ goHome(); return; } // another tab played meanwhile
       // Lock as soon as a play starts: reloading mid-game gives no free retry.
       store(LOCK_KEY, todayStr());
+      recordWeekPlay(todayStr());
       show('story');
       switchMusic('forest');
     });
@@ -1372,7 +1489,7 @@
               reached:Math.min(state.level + 1, LEVELS.length), cleared:state.levelsCleared,
               endedByLives: reason === 'lives',
               code:null, validFrom:null, validTo:null, app:appName(), capped:false };
-    if (tier && activeVouchers().length >= CONFIG.maxVouchers){
+    if (tier && capCount() >= CONFIG.maxVouchers){
       r.capped = true; // already holding the maximum of unused codes: no new one
     } else if (tier){
       // Code = prize letter (G giảm giá / T topping) + play date DDMM + 3 random digits, e.g. G2709-164.
@@ -1404,17 +1521,148 @@
   }
 
   // Turn the prize into a voucher (after the sign-up form is sent).
-  function issueVoucher(r){
+  function addVoucher(v){
     var all = loadVouchers();
-    if (!all.some(function(v){ return v.code === r.code; })){
-      all.push({ code:r.code, tier:r.tier, playDate:r.date, validFrom:r.validFrom, validTo:r.validTo,
+    if (!all.some(function(x){ return x.code === v.code; })){
+      all.push({ code:v.code, tier:v.tier, playDate:v.playDate, validFrom:v.validFrom, validTo:v.validTo,
                  used:false, usedAt:null, usedDate:null });
     }
-    var cutoff = addDays(r.date, -14); // forget long-expired codes
-    saveJSON(VOUCHER_KEY, all.filter(function(v){ return v.validTo >= cutoff; }));
+    var cutoff = addDays(todayStr(), -14); // forget long-expired codes
+    saveJSON(VOUCHER_KEY, all.filter(function(x){ return x.validTo >= cutoff; }));
+  }
+  function issueVoucher(r){
+    addVoucher({ code:r.code, tier:r.tier, playDate:r.date, validFrom:r.validFrom, validTo:r.validTo });
     r.pendingForm = false;
     saveJSON(LAST_KEY, r);
   }
+
+  // ---- Weekly mission: play on N different days, Monday → Sunday (counted on this phone) ----
+  var WEEK_KEY = 'hamichee_hunggame_week', PROFILE_KEY = 'hamichee_hunggame_profile';
+  function mondayOf(isoDate){
+    var p = isoDate.split('-'), d = new Date(+p[0], +p[1]-1, +p[2]);
+    return addDays(isoDate, -((d.getDay() + 6) % 7));
+  }
+  function loadWeek(){
+    var mon = mondayOf(todayStr()), w = loadJSON(WEEK_KEY, null);
+    if (!w || w.week !== mon || !Array.isArray(w.days)) w = { week:mon, days:[], claimed:false, blocked:false, code:null };
+    return w;
+  }
+  function recordWeekPlay(day){
+    var w = loadWeek();
+    if (w.days.indexOf(day) < 0) w.days.push(day);
+    saveJSON(WEEK_KEY, w);
+  }
+  function weekDone(w){ return w.days.length >= CONFIG.weekGoal; }
+  function refreshWeek(){
+    var w = loadWeek(), n = Math.min(w.days.length, CONFIG.weekGoal);
+    var ready = weekDone(w) && !w.claimed && !w.blocked;
+    Array.prototype.forEach.call(document.querySelectorAll('.js-week'), function(b){
+      b.style.display = 'inline-block';
+      b.classList.toggle('done', ready);
+      b.textContent = w.claimed ? '📅 Nhiệm vụ tuần: đã nhận quà ✅'
+        : ready ? '🎁 Xong nhiệm vụ tuần — bấm nhận 1 topping!'
+        : '📅 Nhiệm vụ tuần: đã chơi ' + n + '/' + CONFIG.weekGoal + ' ngày';
+    });
+  }
+  function renderWeek(){
+    var w = loadWeek(), t = todayStr();
+    var days = $('wk-days'); days.innerHTML = '';
+    ['T2','T3','T4','T5','T6','T7','CN'].forEach(function(lbl, i){
+      var d = addDays(w.week, i), el = document.createElement('div');
+      el.className = 'wk-day' + (w.days.indexOf(d) >= 0 ? ' on' : '') + (d === t ? ' today' : '');
+      el.innerHTML = '<i></i><span></span>';
+      el.querySelector('span').textContent = lbl;
+      days.appendChild(el);
+    });
+    var st = $('wk-status'), slot = $('wk-form-slot'), form = $('signup-box');
+    $('wk-prize').style.display = 'none';
+    if (form.parentNode === slot) form.style.display = 'none';
+    if (w.claimed){
+      var v = loadVouchers().filter(function(x){ return x.code === w.code; })[0];
+      st.textContent = 'Bạn đã nhận quà nhiệm vụ tuần này 🎉';
+      if (v){
+        $('wk-prize').style.display = 'flex';
+        $('wk-code').textContent = v.code;
+        $('wk-range').textContent = 'Dùng từ ' + dm(v.validFrom) + ' đến ' + dmy(v.validTo) + ' · ' + CONFIG.toppingText;
+      }
+    } else if (w.blocked){
+      st.textContent = 'Số điện thoại này đã nhận quà nhiệm vụ tuần này rồi — tuần sau chơi tiếp nha!';
+    } else if (!weekDone(w)){
+      var left = CONFIG.weekGoal - w.days.length;
+      st.textContent = 'Còn ' + left + ' ngày nữa là có quà! ' + (w.days.indexOf(t) >= 0 ? 'Mai ghé chơi tiếp nha 🌱' : 'Hôm nay chơi 1 lượt là được thêm 1 ngày 🌱');
+    } else {
+      // Mission complete: one code per day of claiming (its dates follow the claim day, like the sheet).
+      if (!w.code || w.codeDate !== t){
+        var all = loadVouchers(), code;
+        do { code = 'W' + t.slice(8,10) + t.slice(5,7) + '-' + String(Math.floor(Math.random()*1000)).padStart(3,'0'); }
+        while (all.some(function(v){ return v.code === code; }));
+        w.code = code; w.codeDate = t;
+        saveJSON(WEEK_KEY, w);
+      }
+      st.textContent = 'Hoàn thành nhiệm vụ! Điền thông tin để nhận thêm 1 topping 🎁';
+      formResult = { kind:'week', tier:1, code:w.code, date:t, validFrom:addDays(t, 1), validTo:addDays(t, CONFIG.validDays),
+                     score:0, cleared:0, app:appName(), pendingForm:true };
+      slot.appendChild(form);
+      form.querySelector('.su-title').textContent = 'Điền thông tin để nhận quà nhiệm vụ 🎁';
+      form.style.display = 'flex';
+      $('su-error').textContent = '';
+      prefillForm();
+    }
+  }
+  // Put the saved details back into empty fields (the customer typed them on this phone before).
+  function prefillForm(){
+    var p = loadJSON(PROFILE_KEY, null);
+    if (!p) return;
+    if (!$('su-name').value) $('su-name').value = p.name || '';
+    if (!$('su-phone').value) $('su-phone').value = p.phone || '';
+    if (!$('su-year').value) $('su-year').value = p.year || '';
+    if (!$('su-gender').value) $('su-gender').value = p.gender || '';
+    if (!$('su-place').value && p.place){
+      $('su-place').value = p.place;
+      $('su-place-other').hidden = p.place !== 'Tỉnh/thành khác';
+      $('su-place-other').value = p.placeOther || '';
+    }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.js-week'), function(b){
+    b.addEventListener('click', function(){ show('week'); renderWeek(); });
+  });
+  $('wk-back').addEventListener('click', goHome);
+
+  // ---- Daily leaderboard (from the sheet: players who reached a prize and filled in the form) ----
+  function openTop(){
+    show('top');
+    var list = $('top-list'), me = $('top-me');
+    list.innerHTML = ''; me.innerHTML = '';
+    $('top-sub').textContent = 'Đang tải…';
+    var last = loadJSON(LAST_KEY, null);
+    var mine = last && last.date === todayStr() && !last.pendingForm && !last.blocked ? last.code : '';
+    callSheet({ action:'top', code:mine || '' }, 10000).then(function(res){
+      if (!isShown('top')) return;
+      if (!res || !res.ok){ $('top-sub').textContent = 'Chưa tải được bảng, bạn thử lại sau ít phút nha.'; return; }
+      var d = new Date();
+      $('top-sub').textContent = WEEKDAYS[d.getDay()] + ', ' + dmy(todayStr()) + ' · ' + res.total + ' người lên bảng';
+      if (!res.top.length){
+        list.innerHTML = '<li><span class="t-name">Chưa có ai hôm nay — qua màn 2 để lên bảng đầu tiên!</span></li>';
+        return;
+      }
+      var row = function(x){
+        var el = document.createElement('li');
+        el.innerHTML = '<span class="t-rank"></span><span class="t-name"></span><span class="t-score"></span>';
+        el.querySelector('.t-rank').textContent = ['🥇','🥈','🥉'][x.rank - 1] || x.rank;
+        el.querySelector('.t-name').textContent = x.name + (x.cleared >= 3 ? ' 🏆' : '');
+        el.querySelector('.t-score').textContent = x.score;
+        if (x.me) el.className = 'me';
+        return el;
+      };
+      res.top.forEach(function(x){ list.appendChild(row(x)); });
+      if (res.me && res.me.rank > res.top.length){
+        var r = row(res.me); r.className = 'row';
+        me.appendChild(r);
+      }
+    });
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.js-top'), function(b){ b.addEventListener('click', openTop); });
+  $('top-back').addEventListener('click', goHome);
 
   // ---- Sign-up form → Google Sheet ----
   // Rows wait in an outbox on the phone until the network send goes through.
@@ -1467,23 +1715,41 @@
     else if (!$('su-consent').checked) err = 'Bạn tích ô đồng ý để HAMICHEE lưu thông tin và gửi mã nhé.';
     $('su-error').textContent = err;
     if (err) return;
+    var week = r.kind === 'week';
     var payload = { action:'claim', name:name, phone:phone, birthYear:$('su-year').value, gender:$('su-gender').value,
-                    locality:place, code:r.code, prize:prizeText(r.tier), score:r.score,
+                    locality:place, code:r.code, prize:(week ? 'Nhiệm vụ tuần: ' : '') + prizeText(r.tier), score:r.score,
                     cleared:r.cleared || 0, app:r.app || '', playDate:r.date };
     var btn = $('su-submit');
     btn.disabled = true; btn.textContent = 'Đang kiểm tra…';
-    // The sheet checks the phone number: 1 prize per number per day, max 3 unused codes per number.
+    // The sheet checks the phone number: 1 prize per number per day, max 3 unused codes per number,
+    // and 1 weekly-mission prize per number per week.
     callSheet(payload, 8000).then(function(res){
       btn.disabled = false; btn.textContent = 'Nhận mã quà';
+      if (res && res.ok === false && res.reason === 'phone'){
+        $('su-error').textContent = 'Số điện thoại chưa đúng (10 số, bắt đầu bằng 0).';
+        return;
+      }
+      // Remember the details on this phone so the next form is pre-filled.
+      saveJSON(PROFILE_KEY, { name:name, phone:phone, year:$('su-year').value, gender:$('su-gender').value,
+                              place:$('su-place').value, placeOther:$('su-place-other').value.trim() });
+      if (week){
+        var w = loadWeek();
+        if (res && res.ok === false && res.reason === 'weekly') w.blocked = true;
+        else {
+          if (!res) sendToSheet(payload);
+          addVoucher({ code:r.code, tier:1, playDate:r.date, validFrom:r.validFrom, validTo:r.validTo });
+          w.claimed = true;
+        }
+        saveJSON(WEEK_KEY, w);
+        refreshBanners();
+        renderWeek();
+        return;
+      }
       if (res && res.ok === false && (res.reason === 'daily' || res.reason === 'cap')){
         r.pendingForm = false;
         r.blocked = res.reason;
         saveJSON(LAST_KEY, r);
         renderResult(r);
-        return;
-      }
-      if (res && res.ok === false && res.reason === 'phone'){
-        $('su-error').textContent = 'Số điện thoại chưa đúng (10 số, bắt đầu bằng 0).';
         return;
       }
       if (!res) sendToSheet(payload); // no answer (offline / slow): issue anyway and send again later
@@ -1493,19 +1759,24 @@
   });
 
   // POST to the sheet and read its JSON answer; null when offline, slow or unreachable.
-  function callSheet(payload, timeoutMs){
+  // Google now and then turns the POST into a GET (no data reaches the sheet): send it once more.
+  function callSheet(payload, timeoutMs, retried){
     if (!CONFIG.sheetUrl || !window.fetch) return Promise.resolve(null);
     return Promise.race([
       fetch(CONFIG.sheetUrl, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body:JSON.stringify(payload) })
-        .then(function(res){ return res.json(); }),
+        .then(function(res){ return res.json(); })
+        .catch(function(){ return { reason:'retry' }; }),
       new Promise(function(resolve){ setTimeout(function(){ resolve(null); }, timeoutMs || 8000); })
-    ]).catch(function(){ return null; });
+    ]).then(function(res){
+      if (res && res.reason === 'retry') return retried ? null : callSheet(payload, timeoutMs, true);
+      return res;
+    });
   }
 
   // ---- Result ----
   function renderResult(r){
     var win = r.tier === 2 || r.outcome === 'win';
-    $('result-img').src = win ? 'assets/vo-che-sprite.png' : 'assets/chong-dac-sprite.png';
+    $('result-img').src = win ? VO_CHE_SRC : 'assets/chong-dac-sprite.png';
     var title, msg;
     if (r.tier && r.blocked){
       title = win ? 'Cứu được Vợ Chè! 🏆' : 'Giỏi quá! 🎉';
@@ -1523,14 +1794,18 @@
       title = r.outcome === 'lives' || r.endedByLives ? 'Hết tim rồi! 💔' : 'Hết giờ rồi! ⏰';
       msg = 'Bạn đã tới màn ' + (r.reached || 1) + '. Qua màn 2 là có quà — mai ghé HAMICHEE cứu Vợ Chè tiếp nha!';
     }
+    if (THEME_2010 && win) title = title.replace('🏆', '💐');
     $('result-title').textContent = title;
     $('result-score').textContent = r.score;
     $('result-msg').textContent = msg;
     // Prize won but form not filled yet: show the form, keep the code hidden.
     formResult = r;
     var pending = !!(r.tier && r.code && r.pendingForm && !r.blocked);
-    $('signup-box').style.display = pending ? 'flex' : 'none';
-    if (pending) $('su-error').textContent = '';
+    var form = $('signup-box');
+    $('prize-box').parentNode.insertBefore(form, $('prize-box')); // the weekly mission screen may have borrowed it
+    form.querySelector('.su-title').textContent = 'Điền thông tin để nhận mã quà 🎁';
+    form.style.display = pending ? 'flex' : 'none';
+    if (pending){ $('su-error').textContent = ''; prefillForm(); }
     var hasCode = !!(r.tier && r.code) && !pending && !r.blocked;
     $('prize-box').style.display = hasCode ? 'flex' : 'none';
     if (hasCode){
@@ -1583,13 +1858,14 @@
     challenge.text = (win ? 'Mình vừa hứng ' + r.score + ' hạt đác và cứu được Vợ Chè 🏆'
                           : 'Mình hứng được ' + r.score + ' hạt đác, tới màn ' + (r.reached || 1)) +
                      ' trong game Hứng Hạt Đác của HAMICHEE! Bạn dám thử không? 😏 ' + GAME_URL;
-    Promise.all([loadImg('assets/chong-dac-sprite.png'), loadImg('assets/vo-che-sprite.png'), loadImg('assets/chua-te-sprite.png')])
+    Promise.all([loadImg('assets/chong-dac-sprite.png'), loadImg(VO_CHE_SRC), loadImg('assets/chua-te-sprite.png')])
       .then(function(ims){
         var W = 1080, H = 1920, c = document.createElement('canvas'); c.width = W; c.height = H;
         var ctx = c.getContext('2d');
         // background
         var bg = ctx.createLinearGradient(0, 0, 0, H);
-        bg.addColorStop(0, '#00783E'); bg.addColorStop(0.55, '#00542b'); bg.addColorStop(1, '#1f3a26');
+        if (THEME_2010){ bg.addColorStop(0, '#c2336a'); bg.addColorStop(0.55, '#00542b'); bg.addColorStop(1, '#1f3a26'); }
+        else { bg.addColorStop(0, '#00783E'); bg.addColorStop(0.55, '#00542b'); bg.addColorStop(1, '#1f3a26'); }
         ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
         [[120,260,26,0],[960,220,34,1],[180,1420,30,0],[930,1500,24,0],[90,860,20,1],[1000,900,28,0],[540,120,22,0]]
           .forEach(function(s){ drawSeed(ctx, s[0], s[1], s[2], s[3]); });
@@ -1597,7 +1873,8 @@
         var font = function(px, w){ return (w || 'bold') + ' ' + px + 'px "Segoe UI", Roboto, Arial, sans-serif'; };
         ctx.fillStyle = '#FFCC4E'; ctx.font = font(64); ctx.fillText('HAMICHEE', W/2, 190);
         ctx.fillStyle = '#ffffff'; ctx.font = font(92); ctx.fillText('HỨNG HẠT ĐÁC', W/2, 320);
-        ctx.fillStyle = '#e4f2e8'; ctx.font = font(46, '600'); ctx.fillText('Giải Cứu Vợ Chè', W/2, 390);
+        ctx.fillStyle = '#e4f2e8'; ctx.font = font(46, '600');
+        ctx.fillText(THEME_2010 ? 'Giải Cứu Vợ Chè · Mừng 20/10 💐' : 'Giải Cứu Vợ Chè', W/2, 390);
         // cream plate with the characters
         ctx.fillStyle = '#F1E5D6'; roundRect(ctx, 90, 460, 900, 720, 60); ctx.fill();
         if (win){
@@ -1676,7 +1953,7 @@
       var card = document.createElement('div');
       card.className = 'voucher ' + s;
       card.innerHTML = '<div class="v-prize"></div><div class="code"></div><div class="v-range"></div><div class="v-status"></div>';
-      card.querySelector('.v-prize').textContent = prizeText(v.tier);
+      card.querySelector('.v-prize').textContent = voucherPrize(v);
       card.querySelector('.code').textContent = v.code;
       card.querySelector('.v-range').textContent = 'Hạn dùng: ' + dmy(v.validFrom) + ' – ' + dmy(v.validTo);
       card.querySelector('.v-status').textContent =
