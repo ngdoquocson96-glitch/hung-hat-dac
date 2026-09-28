@@ -36,15 +36,7 @@
   .screen.active{ display:flex; }
   button{ font:inherit; }
 
-  /* sprites are JPG-derived with a cream background: fade their edges */
-  .fade-x{
-    -webkit-mask-image:linear-gradient(to right,transparent,#000 10%,#000 90%,transparent);
-    mask-image:linear-gradient(to right,transparent,#000 10%,#000 90%,transparent);
-  }
-  .fade-round{
-    -webkit-mask-image:radial-gradient(closest-side,#000 82%,transparent 100%);
-    mask-image:radial-gradient(closest-side,#000 82%,transparent 100%);
-  }
+  /* sprites are transparent PNGs now; .fade-x / .fade-round stay as harmless hooks */
 
   /* ---- Falling things (also used as small icons in the how-to) ---- */
   .seed{
@@ -107,7 +99,7 @@
   .sub{ color:#555; margin:0; font-size:14px; max-width:330px; }
   .versus{ display:flex; align-items:flex-end; justify-content:center; gap:8px; }
   .versus .hero{ width:92px; height:146px; object-fit:contain; }
-  .versus .villain{ width:120px; height:113px; object-fit:contain; }
+  .versus .villain{ width:98px; height:125px; object-fit:contain; }
   .versus b{ color:var(--red); font-size:20px; margin-bottom:40px; }
   .howto{ background:#fff; border-radius:14px; padding:10px 14px; font-size:13px; color:#333; line-height:1.8; max-width:350px; text-align:left; }
   .howto b{ color:var(--green-dark); }
@@ -117,7 +109,7 @@
   #screen-story h2{ margin:0; font-size:22px; color:var(--yellow); }
   #screen-story p{ margin:0; max-width:320px; line-height:1.55; font-size:15px; }
   .story-art{ display:flex; align-items:flex-end; gap:10px; }
-  .story-art .villain{ width:130px; height:123px; object-fit:contain; }
+  .story-art .villain{ width:104px; height:132px; object-fit:contain; }
   .cage{ position:relative; width:84px; height:120px; }
   .cage img{ width:100%; height:100%; object-fit:contain; }
   .cage::after{ /* iron bars */
@@ -159,13 +151,6 @@
   .sc-bubble{ transform-box:fill-box; animation:scBubble 2.6s ease-in infinite; }
   @keyframes scBubble{ from{ transform:translateY(0); opacity:.9; } to{ transform:translateY(-46px); opacity:0; } }
   @media (prefers-reduced-motion: reduce){ .sc-drift,.sc-drift2,.sc-sway,.sc-glow,.sc-bubble{ animation:none; } }
-  /* the sprite keeps its cream photo background: fade the top edge too, and the scenes keep a cream path where he walks */
-  #player{
-    -webkit-mask-image:linear-gradient(to right,transparent,#000 10%,#000 90%,transparent), linear-gradient(to bottom,transparent,#000 8%);
-    -webkit-mask-composite:source-in;
-    mask-image:linear-gradient(to right,transparent,#000 10%,#000 90%,transparent), linear-gradient(to bottom,transparent,#000 8%);
-    mask-composite:intersect;
-  }
   #player{
     position:absolute; bottom:8px; left:0; width:72px; height:114px; object-fit:contain; z-index:4;
     pointer-events:none; -webkit-touch-callout:none; -webkit-user-drag:none;
@@ -181,7 +166,7 @@
     display:none; position:absolute; left:0; width:96px; height:96px; border-radius:50%; z-index:5; pointer-events:none;
     border:3px solid rgba(80,170,255,.8); background:rgba(80,170,255,.12);
   }
-  #boss{ display:none; position:absolute; top:4px; left:0; width:112px; height:106px; object-fit:contain; z-index:4; pointer-events:none; transition:filter .1s; }
+  #boss{ display:none; position:absolute; top:4px; left:0; width:100px; height:128px; object-fit:contain; z-index:4; pointer-events:none; transition:filter .1s; }
   #boss.hit{ filter:brightness(1.8) saturate(.3); }
   .falling{ position:absolute; top:0; left:0; will-change:transform; pointer-events:none; }
   .shot{ position:absolute; top:0; left:0; width:16px; height:16px; z-index:6; pointer-events:none; transition:transform .25s ease-in; }
@@ -391,9 +376,9 @@
     <div class="t2010-ribbon">🌸 Mừng 20/10 · cứu vợ tặng chị em 🌸</div>
     <button type="button" class="banner js-vouchers" id="home-banner"></button>
     <div class="versus">
-      <img class="hero fade-x" src="assets/chong-dac-sprite.png" alt="Chồng Đác">
+      <img class="hero fade-x" src="assets/chong-dac-sprite.png?v=2" alt="Chồng Đác">
       <b>VS</b>
-      <img class="villain fade-round" src="assets/chua-te-sprite.png" alt="Chúa Tể Chất Bảo Quản">
+      <img class="villain fade-round" src="assets/chua-te-sprite.png?v=2" alt="Chúa Tể Chất Bảo Quản">
     </div>
     <p class="sub">Giúp Chồng Đác vượt 3 màn, đánh bại Chúa Tể Chất Bảo Quản để cứu Vợ Chè!</p>
     <div class="howto">
@@ -413,8 +398,8 @@
   <div id="screen-story" class="screen">
     <h2>Vợ Chè bị bắt rồi!</h2>
     <div class="story-art">
-      <img class="villain fade-round" src="assets/chua-te-sprite.png" alt="">
-      <div class="cage"><img class="fade-x" src="assets/vo-che-sprite.png" alt=""></div>
+      <img class="villain fade-round" src="assets/chua-te-sprite.png?v=2" alt="">
+      <div class="cage"><img class="fade-x" src="assets/vo-che-sprite.png?v=2" alt=""></div>
     </div>
     <p>Chúa Tể Chất Bảo Quản ghét chè nấu mới mỗi ngày, nên bắt Vợ Chè nhốt vào hang.</p>
     <p>Chồng Đác phải hứng thật nhiều hạt đác để có sức mạnh đi cứu vợ!</p>
@@ -437,10 +422,10 @@
     </div>
     <div id="playfield">
       <div id="scenery" aria-hidden="true"></div>
-      <img id="boss" class="fade-round" src="assets/chua-te-sprite.png" alt="">
+      <img id="boss" class="fade-round" src="assets/chua-te-sprite.png?v=2" alt="">
       <div id="aura"></div>
       <div id="shadow"></div>
-      <img id="player" class="fade-x" src="assets/chong-dac-sprite.png" alt="" draggable="false">
+      <img id="player" class="fade-x" src="assets/chong-dac-sprite.png?v=2" alt="" draggable="false">
       <div id="shield"></div>
       <div id="countdown"></div>
       <div id="level-card"><div class="lv" id="lc-lv"></div><div class="nm" id="lc-nm"></div><div class="gl" id="lc-gl"></div></div>
@@ -454,8 +439,8 @@
       <div id="rescue">
         <h2 id="rescue-title">Cứu được Vợ Chè rồi! 🎉</h2>
         <div class="pair">
-          <img class="hero fade-x" src="assets/chong-dac-sprite.png" alt="">
-          <div class="cage" id="rescue-cage"><img class="fade-x" src="assets/vo-che-sprite.png" alt=""></div>
+          <img class="hero fade-x" src="assets/chong-dac-sprite.png?v=2" alt="">
+          <div class="cage" id="rescue-cage"><img class="fade-x" src="assets/vo-che-sprite.png?v=2" alt=""></div>
         </div>
       </div>
     </div>
@@ -612,7 +597,7 @@
   var LOCK_KEY = 'hamichee_hunggame_last_play';      // "YYYY-MM-DD" of the last play
   var LAST_KEY = 'hamichee_hunggame_last_result';    // last game result (re-shown the same day)
   var VOUCHER_KEY = 'hamichee_hunggame_vouchers';    // list of prize codes for next visits
-  var PLAYER_W = 72, PLAYER_H = 114, ITEM = 30, BOSS_W = 112, BOSS_H = 106;
+  var PLAYER_W = 72, PLAYER_H = 114, ITEM = 30, BOSS_W = 100, BOSS_H = 128;
   var WEEKDAYS = ['Chủ nhật','Thứ hai','Thứ ba','Thứ tư','Thứ năm','Thứ sáu','Thứ bảy'];
   var DECOYS = ['mit', 'nhan', 'thach'];
   var BAD = { mit:1, nhan:1, thach:1, chem:1, bomb:1 };
@@ -665,16 +650,16 @@
     var md = todayStr().slice(5);
     return /[?&]theme=2010\b/.test(location.search) || (md >= CONFIG.theme2010.from && md <= CONFIG.theme2010.to);
   })();
-  var VO_CHE_SRC = 'assets/vo-che-sprite.png';
+  var VO_CHE_SRC = 'assets/vo-che-sprite.png?v=2';
   if (THEME_2010){
     document.documentElement.classList.add('t2010');
-    // Optional Vợ Chè in áo dài: used only if assets/vo-che-2010.png has been uploaded.
+    // Optional Vợ Chè in áo dài: used only if assets/vo-che-2010.png?v=2 has been uploaded.
     var ad = new Image();
     ad.onload = function(){
-      VO_CHE_SRC = 'assets/vo-che-2010.png';
-      Array.prototype.forEach.call(document.querySelectorAll('img[src="assets/vo-che-sprite.png"]'), function(im){ im.src = VO_CHE_SRC; });
+      VO_CHE_SRC = 'assets/vo-che-2010.png?v=2';
+      Array.prototype.forEach.call(document.querySelectorAll('img[src="assets/vo-che-sprite.png?v=2"]'), function(im){ im.src = VO_CHE_SRC; });
     };
-    ad.src = 'assets/vo-che-2010.png';
+    ad.src = 'assets/vo-che-2010.png?v=2';
   }
 
   function $(id){ return document.getElementById(id); }
@@ -1058,9 +1043,9 @@
       for (var g = 10; g < 400; g += 34)
         s += '<path d="M' + g + ' 575 l3 -11 l3 11 l3 -13 l3 13 l3 -9 l2 9" stroke="#5f9a5c" stroke-width="1.6" fill="none"/>' +
              '<circle cx="' + (g + 20) + '" cy="' + (560 + (g % 3) * 5) + '" r="2.6" fill="' + (g % 2 ? '#fff6c9' : '#ffffff') + '"/>';
-      // cream dirt path where Chồng Đác walks
-      s += '<path d="M0 588 Q100 578 200 586 T400 582 V700 H0Z" fill="#efe3d0"/>' +
-           '<path d="M0 596 Q100 586 200 594 T400 590 V700 H0Z" fill="#f1e5d6"/>';
+      // dirt path through the grass
+      s += '<path d="M0 640 Q100 628 200 636 T400 632 V700 H0Z" fill="#d9c7a3"/>' +
+           '<path d="M0 652 Q100 642 200 648 T400 644 V700 H0Z" fill="#e6d6b5"/>';
     } else if (i === 1){ // Chợ đêm Nha Trang, lúc hoàng hôn
       s += grad('sc2', [[0,'#f2b497'],[0.5,'#f9d9bf'],[1,'#f3e3d1']]) + '</defs><rect width="400" height="700" fill="url(#sc2)"/>' +
         '<circle cx="90" cy="400" r="70" fill="#ffd9a8" opacity=".45"/><circle cx="90" cy="400" r="38" fill="#ffcf8f" opacity=".85"/>' +
@@ -1077,8 +1062,9 @@
         lanterns([-10,150], [200,210], [410,150], 7, 6, 0.55) +
         lanterns([-10,290], [200,350], [410,290], 6, 8, 0.7) +
         '<g transform="translate(0,-58)">' + stall(0, 128, '') + stall(136, 128, 'HAMICHEE') + stall(272, 128, '') + '</g>' +
-        // cream pavement where Chồng Đác walks
-        '<rect y="583" width="400" height="117" fill="#efe3d0"/><rect y="592" width="400" height="108" fill="#f1e5d6"/>';
+        // market street
+        '<rect y="583" width="400" height="117" fill="#d9b596"/>' +
+        '<path d="M0 610 H400 M0 640 H400 M0 672 H400 M60 583 V700 M150 583 V700 M240 583 V700 M330 583 V700" stroke="#c9a283" stroke-width="1.5"/>';
     } else { // Hang Chất Bảo Quản
       s += grad('sc3', [[0,'#b8a4d0'],[0.45,'#ddd2ea'],[1,'#ece2e6']]) + '</defs><rect width="400" height="700" fill="url(#sc3)"/>' +
         '<ellipse cx="200" cy="430" rx="165" ry="240" fill="#f5f0fa" opacity=".7"/>' +
@@ -1093,8 +1079,9 @@
         '<g fill="#8d77a8"><path d="M150 590 l14 -24 l12 24z"/><path d="M250 590 l10 -18 l10 18z"/></g>' +
         '<g transform="translate(0,-60)">' + barrel(8, 'E211') + barrel(52, 'E202') + barrel(348, 'E250') + '</g>' +
         '<ellipse class="sc-glow" cx="200" cy="582" rx="120" ry="7" fill="#9be36b"/>' +
-        // pale cave floor where Chồng Đác walks
-        '<path d="M0 588 Q100 580 200 586 T400 584 V700 H0Z" fill="#ebe1e8"/><rect y="596" width="400" height="104" fill="#f1e5d6"/>';
+        // cave floor
+        '<path d="M0 588 Q100 580 200 586 T400 584 V700 H0Z" fill="#9a86b3"/>' +
+        '<g fill="#8d77a8"><ellipse cx="70" cy="640" rx="26" ry="6"/><ellipse cx="300" cy="660" rx="34" ry="7"/><ellipse cx="190" cy="690" rx="22" ry="5"/></g>';
     }
     return s + '</svg>';
   }
@@ -1776,7 +1763,7 @@
   // ---- Result ----
   function renderResult(r){
     var win = r.tier === 2 || r.outcome === 'win';
-    $('result-img').src = win ? VO_CHE_SRC : 'assets/chong-dac-sprite.png';
+    $('result-img').src = win ? VO_CHE_SRC : 'assets/chong-dac-sprite.png?v=2';
     var title, msg;
     if (r.tier && r.blocked){
       title = win ? 'Cứu được Vợ Chè! 🏆' : 'Giỏi quá! 🎉';
@@ -1858,7 +1845,7 @@
     challenge.text = (win ? 'Mình vừa hứng ' + r.score + ' hạt đác và cứu được Vợ Chè 🏆'
                           : 'Mình hứng được ' + r.score + ' hạt đác, tới màn ' + (r.reached || 1)) +
                      ' trong game Hứng Hạt Đác của HAMICHEE! Bạn dám thử không? 😏 ' + GAME_URL;
-    Promise.all([loadImg('assets/chong-dac-sprite.png'), loadImg(VO_CHE_SRC), loadImg('assets/chua-te-sprite.png')])
+    Promise.all([loadImg('assets/chong-dac-sprite.png?v=2'), loadImg(VO_CHE_SRC), loadImg('assets/chua-te-sprite.png?v=2')])
       .then(function(ims){
         var W = 1080, H = 1920, c = document.createElement('canvas'); c.width = W; c.height = H;
         var ctx = c.getContext('2d');
