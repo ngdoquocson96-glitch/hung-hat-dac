@@ -1237,6 +1237,8 @@
       r.pendingForm = true;
     }
     saveJSON(LAST_KEY, r); // saved before the pause below, so a reload keeps the result
+    // Anonymous play log for the shop's statistics (no personal data).
+    sendToSheet({ action:'play', outcome:reason, reached:r.reached, cleared:r.cleared, score:r.score, app:r.app });
 
     if (reason === 'win'){ clearItems(); refreshBanners(); renderResult(r); return; }
     // A short "game over" beat before the result screen (also swallows stray drag taps).
