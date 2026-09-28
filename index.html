@@ -146,6 +146,26 @@
   #buffs .x2{ color:#fff; background:var(--orange); border-radius:6px; padding:0 4px; }
 
   #playfield{ position:relative; flex:1; overflow:hidden; touch-action:none; background:linear-gradient(#E4F2E8, var(--cream) 72%); }
+  /* level backdrop (SVG drawn in code), kept soft so falling items stay easy to see */
+  #scenery{ position:absolute; inset:0; z-index:0; pointer-events:none; }
+  #scenery svg{ display:block; width:100%; height:100%; }
+  .sc-drift{ animation:scDrift 38s ease-in-out infinite alternate; }
+  .sc-drift2{ animation:scDrift 55s ease-in-out infinite alternate-reverse; }
+  @keyframes scDrift{ from{ transform:translateX(-30px); } to{ transform:translateX(30px); } }
+  .sc-sway{ transform-box:fill-box; transform-origin:50% 0; animation:scSway 3.2s ease-in-out infinite alternate; }
+  @keyframes scSway{ from{ transform:rotate(-4deg); } to{ transform:rotate(4deg); } }
+  .sc-glow{ animation:scGlow 1.8s ease-in-out infinite alternate; }
+  @keyframes scGlow{ from{ opacity:.35; } to{ opacity:.8; } }
+  .sc-bubble{ transform-box:fill-box; animation:scBubble 2.6s ease-in infinite; }
+  @keyframes scBubble{ from{ transform:translateY(0); opacity:.9; } to{ transform:translateY(-46px); opacity:0; } }
+  @media (prefers-reduced-motion: reduce){ .sc-drift,.sc-drift2,.sc-sway,.sc-glow,.sc-bubble{ animation:none; } }
+  /* the sprite keeps its cream photo background: fade the top edge too, and the scenes keep a cream path where he walks */
+  #player{
+    -webkit-mask-image:linear-gradient(to right,transparent,#000 10%,#000 90%,transparent), linear-gradient(to bottom,transparent,#000 8%);
+    -webkit-mask-composite:source-in;
+    mask-image:linear-gradient(to right,transparent,#000 10%,#000 90%,transparent), linear-gradient(to bottom,transparent,#000 8%);
+    mask-composite:intersect;
+  }
   #player{
     position:absolute; bottom:8px; left:0; width:72px; height:114px; object-fit:contain; z-index:4;
     pointer-events:none; -webkit-touch-callout:none; -webkit-user-drag:none;
@@ -367,6 +387,7 @@
       <button type="button" class="mute-btn js-mute" aria-label="Tắt âm thanh">🔊</button>
     </div>
     <div id="playfield">
+      <div id="scenery" aria-hidden="true"></div>
       <img id="boss" class="fade-round" src="assets/chua-te-sprite.png" alt="">
       <div id="aura"></div>
       <div id="shadow"></div>
@@ -832,6 +853,135 @@
     startLevel(0);
   }
 
+  // ---- Level backdrops: SVG scenes drawn in code (viewBox 400×700, anchored to the bottom).
+  // Strong shapes sit at the edges and the bottom; the middle stays pale so falling items read clearly.
+  function r1(n){ return Math.round(n * 10) / 10; }
+  function grad(id, stops){
+    return '<linearGradient id="' + id + '" x1="0" y1="0" x2="0" y2="1">' +
+      stops.map(function(s){ return '<stop offset="' + s[0] + '" stop-color="' + s[1] + '"/>'; }).join('') + '</linearGradient>';
+  }
+  // Cây đác (sugar palm): tall ringed trunk, feathery fronds, long strings of fruit under the crown.
+  function palm(x, y, h, s, op){
+    var top = y - h, o = '<g opacity="' + op + '">';
+    o += '<path d="M' + r1(x-5*s) + ' ' + y + ' Q' + r1(x-3*s) + ' ' + r1(y-h/2) + ' ' + r1(x-2*s) + ' ' + top +
+         ' L' + r1(x+2*s) + ' ' + top + ' Q' + r1(x+3*s) + ' ' + r1(y-h/2) + ' ' + r1(x+5*s) + ' ' + y + 'Z" fill="#8b7355"/>';
+    for (var k = top + 14*s; k < y - 6; k += 16*s)
+      o += '<path d="M' + r1(x-4*s) + ' ' + r1(k) + ' q' + r1(4*s) + ' ' + r1(3*s) + ' ' + r1(8*s) + ' 0" stroke="#6f5a42" stroke-width="' + r1(1.4*s) + '" fill="none"/>';
+    for (var f = -2; f <= 2; f++){
+      var x1 = x + f*4*s, y1 = top + 6*s, x2 = x + f*9*s, y2 = top + (44 - Math.abs(f)*7)*s;
+      o += '<line x1="' + r1(x1) + '" y1="' + r1(y1) + '" x2="' + r1(x2) + '" y2="' + r1(y2) + '" stroke="#6b5a3a" stroke-width="' + r1(1.2*s) + '"/>';
+      [0.35, 0.55, 0.75, 0.95].forEach(function(t){
+        o += '<circle cx="' + r1(x1 + (x2-x1)*t) + '" cy="' + r1(y1 + (y2-y1)*t) + '" r="' + r1(2.7*s) + '" fill="#7aa05a"/>';
+      });
+    }
+    [-165,-140,-112,-90,-68,-40,-15,172,8].forEach(function(a){
+      var rad = a * Math.PI / 180, L = (a > 0 && a < 180 ? 50 : 64) * s;
+      var ex = x + Math.cos(rad)*L, ey = top + Math.sin(rad)*L + 26*s;
+      var cx = x + Math.cos(rad)*L*0.5, cy = top + Math.sin(rad)*L*0.5 - 16*s;
+      var d = 'M' + x + ' ' + top + ' Q' + r1(cx) + ' ' + r1(cy) + ' ' + r1(ex) + ' ' + r1(ey);
+      o += '<path d="' + d + '" stroke="#4f8f4c" stroke-width="' + r1(12*s) + '" stroke-dasharray="' + r1(1.8*s) + ' ' + r1(1.4*s) + '" fill="none"/>' +
+           '<path d="' + d + '" stroke="#3d6e3a" stroke-width="' + r1(1.5*s) + '" fill="none"/>';
+    });
+    return o + '</g>';
+  }
+  // point on a quadratic curve (for lanterns hung on a string)
+  function qpt(p0, c, p2, t){ var u = 1 - t; return [u*u*p0[0] + 2*u*t*c[0] + t*t*p2[0], u*u*p0[1] + 2*u*t*c[1] + t*t*p2[1]]; }
+  function lanterns(p0, c, p2, n, size, op){
+    var o = '<path d="M' + p0 + ' Q' + c + ' ' + p2 + '" stroke="#7a4a3a" stroke-width="1.5" fill="none" opacity="' + op + '"/>';
+    var cols = ['#e85b4f', '#ffc34d', '#f08a3e'];
+    for (var i = 0; i < n; i++){
+      var p = qpt(p0, c, p2, (i + 0.5) / n), x = r1(p[0]), y = r1(p[1]);
+      o += '<circle class="sc-glow" cx="' + x + '" cy="' + r1(p[1] + 6 + size) + '" r="' + r1(size*2) + '" fill="#ffe3a0"/>' +
+           '<g class="sc-sway" opacity="' + op + '" style="animation-delay:-' + (i*0.7) + 's">' +
+           '<line x1="' + x + '" y1="' + y + '" x2="' + x + '" y2="' + r1(p[1] + 6) + '" stroke="#7a4a3a" stroke-width="1.2"/>' +
+           '<ellipse cx="' + x + '" cy="' + r1(p[1] + 6 + size*1.2) + '" rx="' + size + '" ry="' + r1(size*1.25) + '" fill="' + cols[i % 3] + '"/>' +
+           '<rect x="' + r1(p[0] - size*0.45) + '" y="' + r1(p[1] + 5) + '" width="' + r1(size*0.9) + '" height="2.5" fill="#7a4a3a"/>' +
+           '<rect x="' + r1(p[0] - size*0.45) + '" y="' + r1(p[1] + 5 + size*2.4) + '" width="' + r1(size*0.9) + '" height="2.5" fill="#7a4a3a"/></g>';
+    }
+    return o;
+  }
+  function stall(x, w, sign){
+    var o = '<rect x="' + (x+6) + '" y="560" width="5" height="80" fill="#8a5a44"/><rect x="' + (x+w-11) + '" y="560" width="5" height="80" fill="#8a5a44"/>';
+    for (var i = 0; i < w; i += 16)
+      o += '<rect x="' + (x+i) + '" y="540" width="' + Math.min(16, w-i) + '" height="24" fill="' + ((i/16) % 2 ? '#fff3e0' : '#e05a4a') + '"/>' +
+           '<circle cx="' + (x+i+8) + '" cy="564" r="8" fill="' + ((i/16) % 2 ? '#fff3e0' : '#e05a4a') + '"/>';
+    o += '<rect x="' + x + '" y="605" width="' + w + '" height="36" rx="3" fill="#b7795a"/><rect x="' + x + '" y="603" width="' + w + '" height="5" fill="#9a6247"/>';
+    for (var c = x + 14; c < x + w - 10; c += 20)
+      o += '<path d="M' + (c-6) + ' 590 L' + (c+6) + ' 590 L' + (c+4) + ' 603 L' + (c-4) + ' 603Z" fill="#fffaf0" opacity=".95"/>' +
+           '<rect x="' + (c-6) + '" y="588" width="12" height="4" rx="2" fill="' + ['#8a5a2b', '#fbe7b5', '#9fd08a'][((c-x)/20|0) % 3] + '"/>';
+    if (sign) o += '<rect x="' + (x + w/2 - 40) + '" y="512" width="80" height="22" rx="5" fill="#00783E"/>' +
+                   '<text x="' + (x + w/2) + '" y="528" text-anchor="middle" font-size="12" font-weight="bold" fill="#FFCC4E" font-family="Arial, sans-serif">' + sign + '</text>';
+    return o;
+  }
+  function flask(x, y, s){
+    return '<circle class="sc-glow" cx="' + x + '" cy="' + (y - 6*s) + '" r="' + (13*s) + '" fill="#b8f58f"/>' +
+      '<path d="M' + (x-3*s) + ' ' + (y-22*s) + ' h' + (6*s) + ' v' + (8*s) + ' l' + (8*s) + ' ' + (14*s) + ' h' + (-22*s) + ' l' + (8*s) + ' ' + (-14*s) + 'z" fill="#e8f7ff" opacity=".85" stroke="#5b4a70" stroke-width="1.2"/>' +
+      '<path d="M' + (x-8*s) + ' ' + (y-5*s) + ' h' + (16*s) + ' l' + (3*s) + ' ' + (5*s) + ' h' + (-22*s) + 'z" fill="#79d957"/>' +
+      '<circle class="sc-bubble" cx="' + (x+1) + '" cy="' + (y-24*s) + '" r="' + (2*s) + '" fill="#9be36b" style="animation-delay:-' + (x % 3) + 's"/>';
+  }
+  function barrel(x, label){
+    return '<rect x="' + x + '" y="596" width="40" height="50" rx="7" fill="#7a5d8f"/>' +
+      '<rect x="' + x + '" y="606" width="40" height="5" fill="#5e4671"/><rect x="' + x + '" y="631" width="40" height="5" fill="#5e4671"/>' +
+      '<rect x="' + (x+6) + '" y="613" width="28" height="15" rx="2" fill="#ffd24a"/>' +
+      '<text x="' + (x+20) + '" y="625" text-anchor="middle" font-size="10" font-weight="bold" fill="#5e4671" font-family="Arial, sans-serif">' + label + '</text>';
+  }
+  function scene(i){
+    var s = '<svg viewBox="0 0 400 700" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg"><defs>';
+    if (i === 0){ // Rừng đác Khánh Hòa, buổi sáng
+      s += grad('sc1', [[0,'#bfe3ee'],[0.55,'#e4f3e6'],[1,'#f1e5d6']]) + '</defs><rect width="400" height="700" fill="url(#sc1)"/>' +
+        '<circle cx="318" cy="175" r="62" fill="#fff6c9" opacity=".35"/><circle cx="318" cy="175" r="34" fill="#fff4bf"/>' +
+        '<g class="sc-drift" fill="#fff" opacity=".85"><ellipse cx="70" cy="125" rx="44" ry="13"/><ellipse cx="96" cy="113" rx="26" ry="14"/></g>' +
+        '<g class="sc-drift2" fill="#fff" opacity=".75"><ellipse cx="240" cy="80" rx="38" ry="11"/><ellipse cx="262" cy="70" rx="22" ry="12"/></g>' +
+        '<path d="M0 470 L55 405 L105 440 L170 368 L240 448 L300 392 L355 430 L400 398 V700 H0Z" fill="#c4ddcc"/>' +
+        '<path d="M0 520 Q80 468 160 508 T320 498 T400 488 V700 H0Z" fill="#aad0af"/>' +
+        palm(48, 575, 190, 0.7, 0.55) + palm(150, 585, 150, 0.6, 0.45) + palm(352, 570, 205, 0.72, 0.55) +
+        '<path d="M0 560 Q100 530 200 552 T400 545 V700 H0Z" fill="#95c595"/>' +
+        palm(18, 592, 250, 1, 0.92) + palm(385, 592, 280, 1.05, 0.92) +
+        '<path d="M0 575 Q100 562 200 572 T400 568 V700 H0Z" fill="#7fb77e"/>';
+      for (var g = 10; g < 400; g += 34)
+        s += '<path d="M' + g + ' 575 l3 -11 l3 11 l3 -13 l3 13 l3 -9 l2 9" stroke="#5f9a5c" stroke-width="1.6" fill="none"/>' +
+             '<circle cx="' + (g + 20) + '" cy="' + (560 + (g % 3) * 5) + '" r="2.6" fill="' + (g % 2 ? '#fff6c9' : '#ffffff') + '"/>';
+      // cream dirt path where Chồng Đác walks
+      s += '<path d="M0 588 Q100 578 200 586 T400 582 V700 H0Z" fill="#efe3d0"/>' +
+           '<path d="M0 596 Q100 586 200 594 T400 590 V700 H0Z" fill="#f1e5d6"/>';
+    } else if (i === 1){ // Chợ đêm Nha Trang, lúc hoàng hôn
+      s += grad('sc2', [[0,'#f2b497'],[0.5,'#f9d9bf'],[1,'#f3e3d1']]) + '</defs><rect width="400" height="700" fill="url(#sc2)"/>' +
+        '<circle cx="90" cy="400" r="70" fill="#ffd9a8" opacity=".45"/><circle cx="90" cy="400" r="38" fill="#ffcf8f" opacity=".85"/>' +
+        '<g transform="translate(0,-50)"><rect y="455" width="400" height="45" fill="#a9cbd6" opacity=".85"/>' +
+        '<path d="M40 470 h40 M110 480 h50 M200 468 h30 M60 490 h30" stroke="#fff" stroke-width="2" opacity=".6"/>' +
+        // Tháp Trầm Hương (hình hoa sen) nhìn xa
+        '<g fill="#dd9c86" opacity=".9"><path d="M296 500 L298 380 L306 380 L308 500Z"/>' +
+        '<path d="M302 338 C290 350 286 362 290 378 C296 374 300 368 302 360 C304 368 308 374 314 378 C318 362 314 350 302 338Z"/>' +
+        '<path d="M288 378 h28 v5 h-28z"/></g>' +
+        '<g fill="#e7b39b" opacity=".9"><rect x="0" y="478" width="36" height="42"/><rect x="40" y="468" width="28" height="52"/>' +
+        '<rect x="150" y="484" width="42" height="36"/><rect x="200" y="474" width="30" height="46"/><rect x="330" y="470" width="40" height="50"/><rect x="372" y="486" width="28" height="34"/></g>' +
+        '<g fill="#fff0c8" opacity=".8"><rect x="8" y="488" width="5" height="5"/><rect x="20" y="500" width="5" height="5"/><rect x="48" y="480" width="5" height="5"/>' +
+        '<rect x="160" y="494" width="5" height="5"/><rect x="210" y="486" width="5" height="5"/><rect x="340" y="482" width="5" height="5"/><rect x="354" y="498" width="5" height="5"/></g></g>' +
+        lanterns([-10,150], [200,210], [410,150], 7, 6, 0.55) +
+        lanterns([-10,290], [200,350], [410,290], 6, 8, 0.7) +
+        '<g transform="translate(0,-58)">' + stall(0, 128, '') + stall(136, 128, 'HAMICHEE') + stall(272, 128, '') + '</g>' +
+        // cream pavement where Chồng Đác walks
+        '<rect y="583" width="400" height="117" fill="#efe3d0"/><rect y="592" width="400" height="108" fill="#f1e5d6"/>';
+    } else { // Hang Chất Bảo Quản
+      s += grad('sc3', [[0,'#b8a4d0'],[0.45,'#ddd2ea'],[1,'#ece2e6']]) + '</defs><rect width="400" height="700" fill="url(#sc3)"/>' +
+        '<ellipse cx="200" cy="430" rx="165" ry="240" fill="#f5f0fa" opacity=".7"/>' +
+        '<path d="M0 0 H62 Q34 80 54 160 Q26 250 52 340 Q24 430 58 520 Q40 560 90 590 H0Z" fill="#8d77a8" opacity=".9"/>' +
+        '<path d="M400 0 H338 Q366 80 346 160 Q374 250 348 340 Q376 430 342 520 Q360 560 310 590 H400Z" fill="#8d77a8" opacity=".9"/>';
+      var ceil = 'M0 0 H400 V26', pts = [[388,26],[380,70],[370,26],[350,30],[342,58],[332,28],[300,24],[292,84],[282,26],[250,22],[244,48],[236,24],[196,22],[188,64],[180,24],[140,26],[132,52],[124,26],[96,24],[88,78],[80,26],[54,28],[46,56],[38,26],[0,26]];
+      pts.forEach(function(p){ ceil += ' L' + p[0] + ' ' + p[1]; });
+      s += '<path d="' + ceil + 'Z" fill="#7d6699"/>' +
+        '<rect x="6" y="300" width="70" height="6" rx="2" fill="#5e4671"/>' + flask(22, 300, 1) + flask(52, 300, 0.8) +
+        '<rect x="324" y="420" width="70" height="6" rx="2" fill="#5e4671"/>' + flask(344, 420, 0.85) + flask(374, 420, 1) +
+        '<rect x="330" y="230" width="62" height="6" rx="2" fill="#5e4671"/>' + flask(360, 230, 0.9) +
+        '<g fill="#8d77a8"><path d="M150 590 l14 -24 l12 24z"/><path d="M250 590 l10 -18 l10 18z"/></g>' +
+        '<g transform="translate(0,-60)">' + barrel(8, 'E211') + barrel(52, 'E202') + barrel(348, 'E250') + '</g>' +
+        '<ellipse class="sc-glow" cx="200" cy="582" rx="120" ry="7" fill="#9be36b"/>' +
+        // pale cave floor where Chồng Đác walks
+        '<path d="M0 588 Q100 580 200 586 T400 584 V700 H0Z" fill="#ebe1e8"/><rect y="596" width="400" height="104" fill="#f1e5d6"/>';
+    }
+    return s + '</svg>';
+  }
+
   function startLevel(i){
     var L = LEVELS[i];
     state.level = i;
@@ -845,6 +995,7 @@
     clearItems();
     $('between').style.display = 'none';
     playfield.style.background = 'linear-gradient(' + L.sky + ', var(--cream) 72%)';
+    $('scenery').innerHTML = scene(i);
     boss.style.display = L.boss ? 'block' : 'none';
     state.bossX = (playfield.clientWidth - BOSS_W) / 2;
     boss.style.left = state.bossX + 'px';
