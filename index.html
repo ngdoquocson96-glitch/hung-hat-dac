@@ -418,7 +418,7 @@
   #result-score{ text-shadow:0 3px 0 #c7801a, 0 6px 10px rgba(0,0,0,.2); }
   .code{ background:linear-gradient(#fffef9, #fff3d8); box-shadow:0 5px 0 #d9c28c, 0 9px 16px rgba(0,0,0,.14); }
   .voucher{ border:none; background:linear-gradient(#ffffff, #fbf6ee); box-shadow:0 5px 0 #e2d4bf, 0 9px 16px rgba(80,50,20,.1); }
-  .voucher.ok{ box-shadow:0 5px 0 #a9cdb8, 0 9px 16px rgba(0,80,40,.14); }
+  .voucher.ok{ box-shadow:0 0 0 2px var(--green), 0 5px 0 #a9cdb8, 0 9px 16px rgba(0,80,40,.14); }
   #top-list li, #top-me .row{ box-shadow:0 3px 0 #e2d4bf, 0 5px 10px rgba(80,50,20,.08); }
   .wk-day.on i{ box-shadow:inset -2px -3px 4px rgba(120,90,30,.3), 0 3px 4px rgba(0,0,0,.18); }
 </style>
@@ -694,10 +694,11 @@
   var DECOYS = ['mit', 'nhan', 'thach'];
   var BAD = { mit:1, nhan:1, thach:1, chem:1, bomb:1 };
 
-  // ---- Dates (local calendar, not UTC) ----
+  // ---- Dates (Vietnam calendar like the shop and the sheet, even on a phone set to another timezone) ----
   function pad(n){ return String(n).padStart(2,'0'); }
   function iso(d){ return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
-  function todayStr(){ return iso(new Date()); }
+  function vnNow(){ var d = new Date(); return new Date(d.getTime() + (420 + d.getTimezoneOffset()) * 60000); }
+  function todayStr(){ return iso(vnNow()); }
   function addDays(isoDate, n){ var p = isoDate.split('-'); return iso(new Date(+p[0], +p[1]-1, +p[2] + n)); }
   function dm(isoDate){ var p = isoDate.split('-'); return p[2] + '/' + p[1]; }
   function dmy(isoDate){ var p = isoDate.split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
@@ -832,6 +833,8 @@
       var last = loadJSON(LAST_KEY, null);
       if (last && last.date === t) renderResult(last); else show('locked');
     } else {
+      var prev = loadJSON(LAST_KEY, null); // played just before midnight and the form isn't sent yet
+      if (prev && prev.pendingForm && prev.date === addDays(t, -1) && isShown('result')) return;
       show('home');
     }
   }
@@ -1312,8 +1315,11 @@
       wakeAudio();
       resume();
       if (cs.vid){ var cp = cs.vid.play(); if (cp && cp.catch) cp.catch(function(){}); }
-      if (isShown('story')) playMusic(music.name);
-      if (!state || !state.running) clockCheck = checkClock(); // customer may have fixed the phone clock
+      if (isShown('story') && !cs.vid) playMusic(music.name);
+      if (!state || !state.running){ // customer may have fixed (or changed) the phone clock
+        clockCheck = checkClock();
+        clockCheck.then(function(){ if (isShown('vouchers')) renderVouchers(); });
+      }
       checkDay();
     }
   });
@@ -1586,6 +1592,8 @@
     updateHud(true);
     stopMusic();
     sfx.clear();
+    // prize secured even if the page dies now (boss fight / rescue clip): a reload shows it with the form
+    if (state.levelsCleared >= 2) saveJSON(LAST_KEY, makeResult(state.levelsCleared >= LEVELS.length ? 'win' : 'left'));
     if (state.levelsCleared >= LEVELS.length){
       rescue();
       return;
@@ -1651,6 +1659,25 @@
     dragHint.style.display = 'none';
     levelCard.style.display = 'none';
 
+    var r = makeResult(reason);
+    saveJSON(LAST_KEY, r); // saved before the pause below, so a reload keeps the result
+    // Anonymous play log for the shop's statistics (no personal data).
+    sendToSheet({ action:'play', outcome:reason, reached:r.reached, cleared:r.cleared, score:r.score, app:r.app });
+
+    if (reason === 'win'){ clearItems(); refreshBanners(); renderResult(r); return; }
+    // A short "game over" beat before the result screen (also swallows stray drag taps).
+    sfx.lose();
+    countdownEl.textContent = reason === 'lives' ? 'Hết tim!' : 'Hết giờ!';
+    setTimeout(function(){
+      countdownEl.textContent = '';
+      clearItems();
+      refreshBanners();
+      renderResult(r);
+    }, 900);
+  }
+  // The result (and its prize code) for the current progress. Also saved right after level 2,
+  // so a reload / app kill during the boss fight keeps the topping the customer already won.
+  function makeResult(reason){
     var today = state.playDate;
     // Prize by story progress: past level 2 → topping, boss beaten → discount.
     var tier = state.levelsCleared >= 3 ? 2 : (state.levelsCleared >= 2 ? 1 : 0);
@@ -1673,20 +1700,7 @@
       r.validTo = addDays(today, CONFIG.validDays);
       r.pendingForm = true;
     }
-    saveJSON(LAST_KEY, r); // saved before the pause below, so a reload keeps the result
-    // Anonymous play log for the shop's statistics (no personal data).
-    sendToSheet({ action:'play', outcome:reason, reached:r.reached, cleared:r.cleared, score:r.score, app:r.app });
-
-    if (reason === 'win'){ clearItems(); refreshBanners(); renderResult(r); return; }
-    // A short "game over" beat before the result screen (also swallows stray drag taps).
-    sfx.lose();
-    countdownEl.textContent = reason === 'lives' ? 'Hết tim!' : 'Hết giờ!';
-    setTimeout(function(){
-      countdownEl.textContent = '';
-      clearItems();
-      refreshBanners();
-      renderResult(r);
-    }, 900);
+    return r;
   }
 
   // Turn the prize into a voucher (after the sign-up form is sent).
@@ -1809,7 +1823,7 @@
     callSheet({ action:'top', code:mine || '' }, 10000).then(function(res){
       if (!isShown('top')) return;
       if (!res || !res.ok){ $('top-sub').textContent = 'Chưa tải được bảng, bạn thử lại sau ít phút nha.'; return; }
-      var d = new Date();
+      var d = vnNow();
       $('top-sub').textContent = WEEKDAYS[d.getDay()] + ', ' + dmy(todayStr()) + ' · ' + res.total + ' người lên bảng';
       if (!res.top.length){
         list.innerHTML = '<li><span class="t-name">Chưa có ai hôm nay — qua màn 2 để lên bảng đầu tiên!</span></li>';
@@ -1853,7 +1867,16 @@
     sending = true;
     callSheet(p, 10000).then(function(res){
       sending = false;
-      if (!res || (res.ok === false && !res.reason)) return; // still offline / server error: try next time the page opens
+      if (!res) return; // still offline: try again when the network is back / the page opens
+      if (res.ok === false && !res.reason){ // server error: retry a few times, then give up on this one
+        p.fails = (p.fails || 0) + 1;
+        var keep = p.fails < 5;
+        if (!keep && p.action === 'claim') editVoucher(p.code, function(v){ v.unconfirmed = true; });
+        saveJSON(OUTBOX_KEY, loadJSON(OUTBOX_KEY, []).filter(function(x){ return x._id !== p._id || keep; })
+          .map(function(x){ return x._id === p._id ? p : x; }));
+        if (!keep) flushOutbox();
+        return;
+      }
       if (p.action === 'claim' && res.ok === false && res.reason === 'dup' && (p.tries || 0) < 3){
         // the code was taken meanwhile: give this customer's voucher new digits and send again
         var nc = p.code.slice(0, 6) + String(Math.floor(Math.random() * 1000)).padStart(3, '0');
@@ -1871,6 +1894,7 @@
       flushOutbox();
     });
   }
+  window.addEventListener('online', function(){ flushOutbox(); });
   function editVoucher(code, fn){
     var all = loadVouchers(), v = all.filter(function(x){ return x.code === code; })[0];
     if (v){ fn(v); saveJSON(VOUCHER_KEY, all); }
@@ -1922,7 +1946,7 @@
     }
     // The sheet checks the phone number: 1 prize per number per day, max 3 unused codes per number,
     // and 1 weekly-mission prize per number per week.
-    function submit(){ payload = makePayload(); return callSheet(payload, 8000).then(handle); }
+    function submit(){ payload = makePayload(); return callSheet(payload, 13000).then(handle); }
     submit();
     function handle(res){
       // Another customer already has this code (3 random digits): take a new number and send again.
@@ -2210,23 +2234,30 @@
         // Ask the sheet first: a code recovered on another phone may already be used there.
         var mine = loadVouchers().filter(function(x){ return x.code === code; })[0];
         var usePayload = { action:'use', code:code, token:(mine && mine.token) || '' };
-        callSheet(usePayload, 6000).then(function(res){
-          if (res && res.ok === false && res.reason === 'token'){
+        var queued = loadJSON(OUTBOX_KEY, []).some(function(x){ return x.action === 'claim' && x.code === code; });
+        if (queued) flushOutbox();
+        callSheet(usePayload, 10000).then(function(res){
+          var ok = res && (res.ok === true || res.reason === 'used');
+          if (!ok){
             btn.disabled = false;
-            btn.querySelector('span').textContent = 'Mã này đang giữ ở máy khác — nhân viên tra mã ở trang thu ngân';
+            btn.querySelector('span').textContent =
+              !res || (res.ok === false && !res.reason) ? '⚠️ Không kết nối được — bật mạng rồi giữ lại, hoặc nhân viên tra mã ở trang thu ngân' :
+              res.reason === 'soon' ? '⏳ Mã chưa tới ngày dùng — kiểm tra lại ngày giờ trên điện thoại' :
+              res.reason === 'expired' ? '❌ Mã đã hết hạn' :
+              queued ? '⚠️ Mã chưa lên hệ thống (lúc nhận bị mất mạng) — bật mạng, đợi vài giây rồi giữ lại' :
+              '⚠️ Hệ thống không xác nhận được mã này — nhân viên tra mã ở trang thu ngân';
             return;
           }
           // Re-read storage: another tab may already have used this code.
           var all = loadVouchers();
           var v = all.filter(function(x){ return x.code === code; })[0];
-          if (v && voucherStatus(v) === 'ok'){
+          if (v && !v.used){
             v.used = true;
-            v.usedAt = res && res.ok === false && res.reason === 'used' ? res.at : timeStr(new Date(), false);
+            v.usedAt = res.at || timeStr(vnNow(), false);
             v.usedDate = todayStr();
             saveJSON(VOUCHER_KEY, all);
             vibrate(60);
           }
-          if (!res || (res.ok === false && !res.reason)) sendToSheet(usePayload); // offline / server error: tell the sheet later
           renderVouchers();
           refreshBanners();
         });
@@ -2285,7 +2316,7 @@
   function tickClock(){
     if (!isShown('vouchers')) return;
     if (renderedDate !== todayStr()){ renderVouchers(); return; }
-    var d = new Date();
+    var d = vnNow();
     $('v-clock-text').textContent = WEEKDAYS[d.getDay()] + ', ' + dmy(todayStr()) + ' · ' + timeStr(d, true);
   }
   // A tab left open overnight: move off yesterday's result / "already played" screen.

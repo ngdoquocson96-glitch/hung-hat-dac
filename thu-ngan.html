@@ -108,9 +108,16 @@
   var pinMem = '';
   function getPin(){ if (pinMem) return pinMem; try { return sessionStorage.getItem(PIN_KEY) || ''; } catch(e){ return ''; } }
   function setPin(v){ pinMem = v || ''; try { if (v) sessionStorage.setItem(PIN_KEY, v); else sessionStorage.removeItem(PIN_KEY); } catch(e){} }
+  // Device key the server hands out after a correct PIN: this device stays logged in (even while
+  // strangers typing wrong PINs have locked PIN entry). Changing the PIN on the server revokes it.
+  var DEV_KEY = 'hamichee_staff_dev', devMem = '';
+  function getDev(){ if (devMem) return devMem; try { return localStorage.getItem(DEV_KEY) || ''; } catch(e){ return ''; } }
+  function setDev(v){ devMem = v || ''; try { if (v) localStorage.setItem(DEV_KEY, v); else localStorage.removeItem(DEV_KEY); } catch(e){} }
+  function loggedIn(){ return !!(getPin() || getDev()); }
 
   // Google now and then turns the POST into a GET (nothing is done): send it once more.
   function call(payload, retried){
+    if (payload.pin !== undefined && !payload.dev) payload.dev = getDev();
     return Promise.race([
       fetch(API, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body:JSON.stringify(payload) })
         .then(function(r){ return r.json(); })
@@ -119,6 +126,7 @@
     ]).then(function(res){
       if (res && res.reason === 'retry') return retried ? null : call(payload, true);
       if (res && res.ok === false && res.error) return null; // server error → "không kết nối được, thử lại"
+      if (res && res.dev) setDev(res.dev);
       return res;
     });
   }
@@ -128,7 +136,7 @@
     if (on) $('code').focus(); else $('pin').focus();
   }
   function pinRejected(){
-    setPin(''); showWork(false);
+    setPin(''); setDev(''); showWork(false);
     $('pin-msg').textContent = 'PIN không đúng, nhập lại nha.';
   }
 
@@ -148,7 +156,7 @@
       showWork(true);
     });
   });
-  $('logout').addEventListener('click', function(){ setPin(''); $('result').className = ''; $('stats').innerHTML = ''; showWork(false); });
+  $('logout').addEventListener('click', function(){ setPin(''); setDev(''); current = null; $('result').className = ''; $('stats').innerHTML = ''; showWork(false); });
 
   // Look up a code
   var current = null;
@@ -156,11 +164,14 @@
     var box = $('result'), st = $('r-status'), dt = $('r-detail'), use = $('use-btn');
     use.hidden = true;
     var range = info.validFrom ? 'Hạn dùng: ' + dmy(info.validFrom) + ' – ' + dmy(info.validTo) : '';
-    var prize = info.prize ? '<b>' + escapeHtml(info.prize) + '</b><br>' : '';
+    var prize = (info.code ? '<span class="r-code">Mã ' + escapeHtml(info.code) + '</span><br>' : '') +
+                (info.prize ? '<b>' + escapeHtml(info.prize) + '</b><br>' : '') +
+                (info.owner ? 'Của khách: <b>' + escapeHtml(info.owner) + '</b> · SĐT đuôi <b>' + escapeHtml(info.phoneEnd) + '</b> — hỏi khách đọc 3 số cuối SĐT để đối chiếu<br>' : '');
     if (!info.found){
       box.className = 'show bad';
       st.textContent = '❌ Không có mã này';
-      dt.innerHTML = 'Có thể gõ nhầm, mã giả, hoặc khách mất mạng lúc nhận mã. Xem màn hình "Mã ưu đãi của tôi" trên điện thoại khách và tra sổ mã.';
+      dt.innerHTML = 'Kiểm tra lại có gõ nhầm không. Mã không có trong hệ thống thì <b>KHÔNG áp dụng ưu đãi</b>. ' +
+        'Nếu khách nhận mã lúc mất mạng: nhờ khách bật mạng, mở lại game (mã tự gửi lên), đợi vài giây rồi tra lại.';
     } else if (info.status === 'ok'){
       box.className = 'show ok';
       st.textContent = '✅ Hợp lệ — dùng được hôm nay';
@@ -186,9 +197,11 @@
   }
   function escapeHtml(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; }); }
 
-  $('code').addEventListener('input', function(){ this.value = this.value.toUpperCase().replace(/\s/g, ''); });
+  function clearResult(){ current = null; $('result').className = ''; $('use-btn').hidden = true; }
+  $('code').addEventListener('input', function(){ this.value = this.value.toUpperCase().replace(/\s/g, ''); clearResult(); });
   $('code-box').addEventListener('submit', function(e){
     e.preventDefault();
+    clearResult();
     var code = $('code').value.trim().toUpperCase();
     if (!/^[TGW]\d{4}-\d{3}$/.test(code)){ $('code-msg').textContent = 'Mã có dạng T2709-548, G2709-548 hoặc W2709-548.'; $('result').className = ''; return; }
     $('code-msg').textContent = ''; $('check-btn').disabled = true; $('check-btn').textContent = 'Đang tra…';
@@ -197,18 +210,20 @@
       if (!res){ $('code-msg').textContent = 'Không kết nối được, thử lại nha.'; return; }
       if (res.ok === false && res.reason === 'locked'){ $('code-msg').textContent = 'Hệ thống tạm khóa do nhập sai PIN nhiều lần — thử lại sau 15 phút.'; return; }
       if (res.ok === false && res.reason === 'pin'){ pinRejected(); return; }
+      if (code !== $('code').value.trim().toUpperCase()) return; // typed another code meanwhile
       current = code;
       render(res);
     });
   });
   $('use-btn').addEventListener('click', function(){
     if (!current) return;
-    var b = this; b.disabled = true; b.textContent = 'Đang xác nhận…';
-    call({ action:'staffUse', code:current, pin:getPin() }).then(function(res){
+    var b = this, code = current; b.disabled = true; b.textContent = 'Đang xác nhận…';
+    call({ action:'staffUse', code:code, pin:getPin() }).then(function(res){
       b.disabled = false; b.textContent = '✅ Xác nhận đã dùng';
       if (!res){ $('code-msg').textContent = 'Không kết nối được, chưa xác nhận. Thử lại nha.'; return; }
       if (res.ok === false && res.reason === 'locked'){ $('code-msg').textContent = 'Hệ thống tạm khóa do nhập sai PIN nhiều lần — thử lại sau 15 phút.'; return; }
       if (res.ok === false && res.reason === 'pin'){ pinRejected(); return; }
+      if (code !== current) return;
       render(res);
     });
   });
@@ -234,7 +249,7 @@
     });
   });
 
-  if (getPin()) showWork(true); else showWork(false);
+  showWork(loggedIn());
 })();
 </script>
 </body>

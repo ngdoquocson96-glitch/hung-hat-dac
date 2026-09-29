@@ -188,7 +188,7 @@
   #screen-end > :not(#confetti){ position:relative; z-index:2; }
   #rotate{ display:none; position:fixed; inset:0; z-index:99; background:var(--green); color:#fff; font-size:20px; font-weight:bold;
            align-items:center; justify-content:center; text-align:center; padding:20px; }
-  @media (orientation:landscape) and (max-height:480px){ #rotate{ display:flex; } }
+  @media (orientation:landscape) and (max-height:560px){ #rotate{ display:flex; } }
   @media (prefers-reduced-motion: reduce){ .layer, #pop.go, #cust.angry #cust-face, #cust.happy #cust-face, #confetti span, #cup.shake{ animation:none; } }
 
   /* ==== 3D look: glossy buttons, steel topping station, glass cup on a wooden counter ==== */
@@ -420,7 +420,7 @@
 <script>
 (function(){
   var API = 'https://script.google.com/macros/s/AKfycbz53HiMjoKMbZh6ZBtPu6DHh9YEdgP-ro5ubKj-cOmN2J27RpvKFAB-Jei7Mum6KveeWA/exec';
-  var K = { pin:'hmc_train_pin', rows:'hmc_train_rows', staff:'hmc_train_staff', name:'hmc_train_name', mode:'hmc_train_mode',
+  var K = { pin:'hmc_train_pin', dev:'hmc_train_dev', rows:'hmc_train_rows', staff:'hmc_train_staff', name:'hmc_train_name', mode:'hmc_train_mode',
             best:'hmc_train_best', score:'hmc_train_bestscore', miss:'hmc_train_miss', daily:'hmc_train_daily', outbox:'hmc_train_outbox' };
   var MIN_ORDERS = 6, RUSH_ORDERS = 8, DAILY_ORDERS = 3, TOL = 0.10; // ±10% cho định lượng 1 con số
   var UNITS = ['g', 'ml', 'viên', 'vá', 'miếng', 'trái', 'muỗng', 'xịt', 'gói', 'cái', 'sợi'];
@@ -431,14 +431,24 @@
   function $(id){ return document.getElementById(id); }
   function load(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
   function store(k, v){ try { localStorage.setItem(k, v); } catch(e){} }
-  function loadJSON(k, f){ try { var v = JSON.parse(load(k)); return v == null ? f : v; } catch(e){ return f; } }
+  function loadJSON(k, f){
+    try {
+      var v = JSON.parse(load(k));
+      if (v == null) return f;
+      if (Array.isArray(f)) return Array.isArray(v) ? v : f;
+      if (f && typeof f === 'object') return typeof v === 'object' && !Array.isArray(v) ? v : f;
+      return v;
+    } catch(e){ return f; }
+  }
   function saveJSON(k, v){ store(k, JSON.stringify(v)); }
   function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; }); }
   function num(s){ return parseFloat(String(s).replace(',', '.')); }
   function fmt(n){ return (Math.round(n * 100) / 100).toString().replace('.', ','); }
   function shuffle(a, rnd){ rnd = rnd || Math.random; for (var i = a.length - 1; i > 0; i--){ var j = Math.floor(rnd() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
   function pad2(n){ return ('0' + n).slice(-2); }
-  function todayIso(){ var d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+  function vnNow(){ var d = new Date(); return new Date(d.getTime() + (420 + d.getTimezoneOffset()) * 60000); }
+  function dayIso(n){ var d = vnNow(); d.setDate(d.getDate() + (n || 0)); return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+  function todayIso(){ return dayIso(0); }
   function seeded(str){ // same random sequence for everyone on the same day
     var h = 1779033703 ^ str.length;
     for (var i = 0; i < str.length; i++){ h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
@@ -451,6 +461,7 @@
 
   // ---- Server (same Google Apps Script as the customer game) ----
   function call(payload, retried){
+    if (payload.pin !== undefined) payload.dev = load(K.dev) || '';
     return Promise.race([
       fetch(API, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body:JSON.stringify(payload) })
         .then(function(r){ return r.json(); }).catch(function(){ return { reason:'retry' }; }),
@@ -458,6 +469,8 @@
     ]).then(function(res){
       if (res && res.reason === 'retry') return retried ? null : call(payload, true);
       if (res && res.ok === false && res.error) return null; // server error = try again later
+      if (res && res.dev) store(K.dev, res.dev);
+      if (res && res.reason === 'pin') store(K.dev, '');
       return res;
     });
   }
@@ -471,11 +484,14 @@
     s = String(s || '').trim();
     if (!s) return [];
     return s.split('|').map(function(p){
-      p = p.trim();
-      var q = p.replace(/½/g, '0,5').replace(/(\d+)\s*\/\s*(\d+)/g, function(_, a, b){ return fmt(a / b); });
+      p = p.trim().normalize ? p.trim().normalize('NFC') : p.trim();
+      var q = p.replace(/\b([1-9]\d{0,2})\.(\d{3})(?![\d.,])/g, '$1$2')                        // 1.000 ml = 1000 ml
+        .replace(/(\d+)\s*½/g, function(_, a){ return fmt(+a + 0.5); })                         // 1½ vá
+        .replace(/(\d+)\s+(\d+)\s*\/\s*(\d+)/g, function(_, a, b, c){ return fmt(+a + b / c); }) // 1 1/2 vá
+        .replace(/½/g, '0,5').replace(/(\d+)\s*\/\s*(\d+)/g, function(_, a, b){ return fmt(a / b); });
       var m = /^(\d+(?:[.,]\d+)?)(?:\s*[-–]\s*(\d+(?:[.,]\d+)?))?\s*(\D.*)$/.exec(q);
       if (!m) return { raw:p };
-      var u = m[3].trim().toLowerCase(); u = UNIT_ALIAS[u] || u;
+      var u = m[3].trim().toLowerCase(); u = u.normalize ? u.normalize('NFC') : u; u = UNIT_ALIAS[u] || u;
       if (UNITS.indexOf(u) < 0) return { raw:p };
       var a = num(m[1]), b = m[2] ? num(m[2]) : a;
       return { min:Math.min(a, b), max:Math.max(a, b), range:!!m[2], u:u };
@@ -648,8 +664,9 @@
   function starText(n){ return n == null ? '' : '★★★'.slice(0, n) + '☆☆☆'.slice(0, 3 - n); }
   function levelOrders(g){
     if (g === RUSH) return RUSH_ORDERS;
-    var size = DATA.dishes.filter(function(d){ return d.group === g; }).length;
-    return Math.max(MIN_ORDERS, size);
+    var pool = DATA.dishes.filter(function(d){ return d.group === g; }), miss = misses();
+    var weak = Math.min(2, pool.filter(function(d){ return miss[d.code] > 0; }).length);
+    return Math.max(MIN_ORDERS, pool.length + weak);
   }
   function renderLevels(){
     var box = $('levels'); box.innerHTML = '';
@@ -678,10 +695,11 @@
   var OTHER = '__other';
   function renderStaff(){
     var staff = loadJSON(K.staff, []), sel = $('name-sel'), cur = load(K.name) || '';
+    var wasOther = !sel.hidden && sel.value === OTHER;
     if (!staff.length){ sel.hidden = true; $('name').hidden = false; $('name').value = cur; return; }
     sel.innerHTML = '<option value="">— Chọn tên của em —</option>' + staff.map(function(s){ return '<option>' + esc(s) + '</option>'; }).join('') +
                     '<option value="' + OTHER + '">✍️ Tên khác (tự điền)</option>';
-    var typed = cur && staff.indexOf(cur) < 0;
+    var typed = (cur && staff.indexOf(cur) < 0) || (wasOther && !cur);
     sel.value = typed ? OTHER : (staff.indexOf(cur) >= 0 ? cur : '');
     sel.hidden = false;
     $('name').hidden = !typed; $('name').value = typed ? cur : '';
@@ -702,8 +720,7 @@
   // Daily challenge: 3 dishes picked by the date, the same for everyone
   function dailyLevel(){ var t = todayIso(); return 'Thử thách ' + t.slice(8, 10) + '/' + t.slice(5, 7); }
   function renderDaily(){
-    var d = loadJSON(K.daily, {}), t = todayIso(), yest = new Date(); yest.setDate(yest.getDate() - 1);
-    var y = yest.getFullYear() + '-' + pad2(yest.getMonth() + 1) + '-' + pad2(yest.getDate());
+    var d = loadJSON(K.daily, {}), t = todayIso(), y = dayIso(-1);
     var streak = d.last === t || d.last === y ? d.streak || 0 : 0;
     $('daily-title').textContent = '🎯 ' + dailyLevel() + (d.last === t ? ' · đã chơi ✓' : '');
     $('daily-sub').textContent = '3 món giống nhau cho cả quán · tính như Thi' + (streak ? ' · 🔥 ' + streak + ' ngày liên tiếp' : '');
@@ -718,7 +735,7 @@
     call({ action:'trainTop', pin:load(K.pin) }).then(function(res){
       if (!res || !res.ok || !res.board) return;
       var me = playerName(), b = res.board;
-      function rows(list, fn){ return list.length ? list.map(function(x, i){ return '<div class="r' + (x.name === me ? ' me' : '') + '"><span>' + ['🥇','🥈','🥉'][i] + (i > 2 ? (i + 1) + '.' : '') + ' ' + esc(x.name) + '</span><span>' + fn(x) + '</span></div>'; }).join('') : '<div class="r"><span style="color:#999">Chưa có ai</span></div>'; }
+      function rows(list, fn){ return list.length ? list.map(function(x, i){ return '<div class="r' + (x.name === me ? ' me' : '') + '"><span>' + (i < 3 ? ['🥇','🥈','🥉'][i] : (i + 1) + '.') + ' ' + esc(x.name) + '</span><span>' + fn(x) + '</span></div>'; }).join('') : '<div class="r"><span style="color:#999">Chưa có ai</span></div>'; }
       $('board-week').innerHTML = rows(b.week || [], function(x){ return x.acc + '%'; });
       $('board-today').innerHTML = rows(b.today || [], function(x){ return x.correct + '/3 · ' + fmtTime(x.sec); });
       $('board').hidden = false;
@@ -788,7 +805,7 @@
     var shelfIngs = Object.keys(DATA.ings).filter(function(k){
       return lv.kind !== 'group' || DATA.ings[k].groups[lv.group];
     });
-    P = { lv:lv, level:lv.group, name:name, mode:playMode, orders:makeOrders(lv), idx:-1, results:[], score:0, streak:0, bestStreak:0, shelf:shelfIngs, tab:null };
+    P = { lv:lv, level:lv.group, name:name, mode:playMode, day:todayIso(), dayBefore:dayIso(-1), orders:makeOrders(lv), idx:-1, results:[], score:0, streak:0, bestStreak:0, shelf:shelfIngs, tab:null };
     buildShelf();
     show('play');
     guardBack(true);
@@ -846,7 +863,14 @@
   function elapsed(){ return (Date.now() - P.cur.start) / 1000; }
   // A Zalo message, a call or a locked screen must not count as "trễ KPI": stop the clock while the
   // app is in the background, but count how often it happened (the manager sees it in the sheet).
-  var hiddenAt = 0;
+  var hiddenAt = 0, rotAt = 0;
+  var rotMq = window.matchMedia ? window.matchMedia('(orientation:landscape) and (max-height:560px)') : null;
+  function onRotate(){
+    if (!P || !P.cur || P.done){ rotAt = 0; return; }
+    if (rotMq.matches) rotAt = Date.now();
+    else if (rotAt){ if (!$('rv').classList.contains('on')) P.cur.start += Date.now() - rotAt; rotAt = 0; renderTimer(); }
+  }
+  if (rotMq){ if (rotMq.addEventListener) rotMq.addEventListener('change', onRotate); else if (rotMq.addListener) rotMq.addListener(onRotate); }
   document.addEventListener('visibilitychange', function(){
     if (!P || !P.cur || P.done) return;
     if (document.hidden){ hiddenAt = Date.now(); }
@@ -1127,19 +1151,22 @@
   }
   function finish(){
     clearInterval(tick);
-    var S = sendResult(false), n = S.n;
-    var ratio = S.ok / n, stars = ratio === 1 && (P.mode === 'hoc' || S.onTime === n) ? 3 : ratio >= 0.8 ? 2 : ratio >= 0.5 ? 1 : 0;
+    var S = sendResult(false);
+    var F = P.results.filter(function(r){ return !r.retry; }), n = F.length || 1;
+    var fOk = F.filter(function(r){ return r.ok; }).length, fOn = F.filter(function(r){ return r.ok && !r.late; }).length;
+    var ratio = fOk / n, stars = ratio === 1 && (P.mode === 'hoc' || fOn === n) ? 3 : ratio >= 0.8 ? 2 : ratio >= 0.5 ? 1 : 0;
     var key = P.mode + '|' + P.level, b = best(), scores = loadJSON(K.score, {}), record = false;
     if (P.lv.kind !== 'daily' && (b[key] == null || stars > b[key])){ b[key] = stars; saveJSON(K.best, b); }
     if (scores[key] == null || P.score > scores[key]){ record = scores[key] != null; scores[key] = P.score; saveJSON(K.score, scores); }
     if (P.lv.kind === 'daily'){
-      var d = loadJSON(K.daily, {}), t = todayIso(), y = new Date(); y.setDate(y.getDate() - 1);
-      var yIso = y.getFullYear() + '-' + pad2(y.getMonth() + 1) + '-' + pad2(y.getDate());
+      var d = loadJSON(K.daily, {}), t = P.day, yIso = P.dayBefore; // the day the challenge was started
       if (d.last !== t){ d.streak = d.last === yIso ? (d.streak || 0) + 1 : 1; d.last = t; saveJSON(K.daily, d); }
     }
     $('end-title').textContent = stars >= 2 ? 'Làm tốt lắm, ' + P.name + '! 🎉' : 'Luyện thêm chút nữa nha 💪';
     $('end-score').textContent = P.score + ' điểm';
-    $('end-sub').textContent = 'Đúng SOP ' + S.ok + '/' + n + ' món' + (P.mode === 'thi' ? ' · đúng giờ ' + S.onTime + '/' + n : '') +
+    var nRetry = P.results.length - F.length, okRetry = P.results.filter(function(r){ return r.retry && r.ok; }).length;
+    $('end-sub').textContent = 'Đúng SOP ' + fOk + '/' + n + ' món' + (P.mode === 'thi' ? ' · đúng giờ ' + fOn + '/' + n : '') +
+      (nRetry ? ' · làm lại đúng ' + okRetry + '/' + nRetry : '') +
       ' · trung bình ' + fmtTime(S.avg) + '/món' + (P.bestStreak >= 2 ? ' · combo dài nhất 🔥' + P.bestStreak : '');
     $('end-record').hidden = !record;
     var m = $('end-mist'); m.innerHTML = '';
@@ -1183,10 +1210,16 @@
         : 'Chưa gửi được (mất mạng) — sẽ tự gửi lại lần sau mở game.';
     });
   }
+  var flushing = false;
   function flushOutbox(){
-    loadJSON(K.outbox, []).forEach(function(p){
-      p.pin = load(K.pin) || p.pin; // the PIN may have been changed since
-      call(p).then(function(res){ if (res && res.ok) outboxDrop(p.id); });
+    if (flushing) return;
+    var p = loadJSON(K.outbox, [])[0];
+    if (!p) return;
+    flushing = true;
+    p.pin = load(K.pin) || p.pin; // the PIN may have been changed since
+    call(p).then(function(res){
+      flushing = false;
+      if (res && res.ok){ outboxDrop(p.id); flushOutbox(); }
     });
   }
   function appName(){
@@ -1214,12 +1247,16 @@
   document.addEventListener('touchstart', function(){}, { passive:true }); // makes :active feedback work on iOS
 
   // ---- Startup: cached recipes first, then refresh from the sheet ----
-  var cached = loadJSON(K.rows, null), pin = load(K.pin);
-  if (cached && pin && ready(cached)){
+  var cached = loadJSON(K.rows, []), pin = load(K.pin), started = false;
+  boardAt = Date.now(); // the board waits until the saved PIN is confirmed
+  try { started = cached.length > 0 && !!pin && ready(cached); } catch(e){ started = false; }
+  if (started){
     call({ action:'recipes', pin:pin }).then(function(res){
       if (res && res.ok){
         saveJSON(K.rows, res.rows); saveJSON(K.staff, res.staff || []);
         if (!P){ DATA = build(res.rows); renderStaff(); renderLevels(); }
+        boardAt = 0; if (!P) loadBoard();
+        flushOutbox();
       }
       else if (res && res.reason === 'pin'){
         store(K.pin, '');
@@ -1228,7 +1265,6 @@
         show('pin'); $('pin-msg').textContent = 'PIN đã đổi, nhập PIN mới nha.';
       }
     });
-    flushOutbox();
   } else show('pin');
 })();
 </script>
