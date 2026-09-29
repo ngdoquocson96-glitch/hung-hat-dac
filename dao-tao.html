@@ -309,21 +309,29 @@
     return alts.map(function(a){ return (a.range ? fmt(a.min) + '–' + fmt(a.max) : fmt(a.min)) + ' ' + a.u; }).join(' hoặc ');
   }
   function build(rows){
-    var dishes = [], byCode = {}, groups = [], ings = {};
+    var dishes = [], byCode = {}, groups = [], ings = {}, wilds = [];
     rows.slice(1).forEach(function(r){
       if (!r[1] || !r[6]) return;
       var d = byCode[r[1]];
       if (!d){
-        d = byCode[r[1]] = { group:r[0], code:r[1], name:r[2], kpi:parseInt(r[3], 10) || 120, rule:/^c/i.test(r[4]), vessel:r[5], items:[] };
+        // Luật cốt dừa: "có" = tại chỗ cho trước / mang về cho sau · "sau cùng" = luôn cho sau cùng
+        var rule = /sau/i.test(r[4]) ? 'last' : /^c/i.test(r[4]) ? 'inout' : '';
+        d = byCode[r[1]] = { group:r[0], code:r[1], name:r[2], kpi:parseInt(r[3], 10) || 120, rule:rule, vessel:r[5], items:[] };
         dishes.push(d);
         if (groups.indexOf(r[0]) < 0) groups.push(r[0]);
       }
       var alts = parseQty(r[7]), only = String(r[8] || '').trim().toLowerCase();
-      d.items.push({ ing:r[6], alts:alts, only:/mang/.test(only) ? 'out' : (/chỗ|cho/.test(only) ? 'in' : '') });
+      // "Hạt đác (loại nào cũng được)": any ingredient whose name starts with "Hạt đác" counts
+      var wild = /\s*\(loại nào cũng được\)\s*$/i.exec(r[6]);
+      var item = { ing:r[6], alts:alts, only:/mang/.test(only) ? 'out' : (/chỗ|cho/.test(only) ? 'in' : ''), any:wild ? r[6].slice(0, wild.index) : '' };
+      d.items.push(item);
+      if (item.any){ wilds.push({ base:item.any, group:r[0] }); return; }
       var g = ings[r[6]] || (ings[r[6]] = { name:r[6], unit:'', any:false, groups:{} });
       if (alts.length){ g.any = true; if (!g.unit) g.unit = alts[0].u; }
       g.groups[r[0]] = 1;
     });
+    // put every variant of a wildcard ingredient on that group's shelf
+    wilds.forEach(function(w){ Object.keys(ings).forEach(function(k){ if (k.indexOf(w.base) === 0) ings[k].groups[w.group] = 1; }); });
     return { dishes:dishes, groups:groups, ings:ings };
   }
 
@@ -358,10 +366,12 @@
   function grade(o){
     var dish = o.dish, items = need(dish, o.where), lines = [], ok = true, by = {};
     o.added.forEach(function(a){ (by[a.ing] = by[a.ing] || []).push(a); });
+    function matches(it, name){ return it.any ? name.indexOf(it.any) === 0 : name === it.ing; }
     items.forEach(function(it){
-      var got = by[it.ing];
+      var got = o.added.filter(function(a){ return matches(it, a.ing); });
+      if (!got.length) got = null;
       if (!got){ ok = false; lines.push({ ok:false, text:'Thiếu ' + it.ing, sub:'Chuẩn: ' + qtyText(it.alts) }); return; }
-      var gotText = got.map(function(a){ return a.qty == null ? 'vừa đủ' : fmt(a.qty) + ' ' + a.u; }).join(' + ');
+      var gotText = got.map(function(a){ return (it.any && a.ing !== it.any ? a.ing.slice(it.any.length).trim() + ' ' : '') + (a.qty == null ? 'vừa đủ' : fmt(a.qty) + ' ' + a.u); }).join(' + ');
       var good = true;
       if (it.alts.length){
         var units = {}, fill = false;
@@ -377,14 +387,15 @@
       lines.push({ ok:good, text:it.ing + ': ' + gotText, sub:good ? '' : 'Chuẩn: ' + qtyText(it.alts) });
     });
     Object.keys(by).forEach(function(ing){
-      if (!items.some(function(it){ return it.ing === ing; })){ ok = false; lines.push({ ok:false, text:'Thừa ' + ing, sub:'Món này không có ' + ing }); }
+      if (!items.some(function(it){ return matches(it, ing); })){ ok = false; lines.push({ ok:false, text:'Thừa ' + ing, sub:'Món này không có ' + ing }); }
     });
     if (dish.rule && by['Cốt dừa']){
       var first = o.added[0].ing === 'Cốt dừa', last = o.added[o.added.length - 1].ing === 'Cốt dừa';
-      var rOk = o.where === 'in' ? first : last;
+      var wantFirst = dish.rule === 'inout' && o.where === 'in';
+      var rOk = wantFirst ? first : last;
       if (!rOk) ok = false;
-      lines.push({ ok:rOk, text:o.where === 'in' ? 'Ăn tại chỗ: cốt dừa cho trước' : 'Mang về: cốt dừa cho sau cùng',
-                   sub:rOk ? '' : (o.where === 'in' ? 'Em chưa cho cốt dừa đầu tiên' : 'Em chưa để cốt dừa cuối cùng') });
+      lines.push({ ok:rOk, text:dish.rule === 'last' ? 'Món này: cốt dừa luôn cho sau cùng' : wantFirst ? 'Ăn tại chỗ: cốt dừa cho trước' : 'Mang về: cốt dừa cho sau cùng',
+                   sub:rOk ? '' : (wantFirst ? 'Em chưa cho cốt dừa đầu tiên' : 'Em chưa để cốt dừa cuối cùng') });
     }
     return { ok:ok, lines:lines };
   }
@@ -639,7 +650,9 @@
       l.appendChild(d);
     });
     var notes = [];
-    if (dish.rule) notes.push('🥥 <b>Ăn tại chỗ:</b> cốt dừa cho <b>trước</b>. <b>Mang về:</b> cốt dừa cho <b>sau cùng</b>.' + (where ? ' Đơn này: <b>' + (where === 'in' ? 'ăn tại chỗ' : 'mang về') + '</b>.' : ''));
+    if (dish.rule === 'inout') notes.push('🥥 <b>Ăn tại chỗ:</b> cốt dừa cho <b>trước</b>. <b>Mang về:</b> cốt dừa cho <b>sau cùng</b>.' + (where ? ' Đơn này: <b>' + (where === 'in' ? 'ăn tại chỗ' : 'mang về') + '</b>.' : ''));
+    if (dish.rule === 'last') notes.push('🥥 Món này: cốt dừa luôn cho <b>sau cùng</b> (cả ăn tại chỗ lẫn mang về).');
+    if (dish.items.some(function(it){ return it.any; })) notes.push('⚪ Hạt đác: loại nào cũng được, tùy quán đang có — cộng lại đủ định lượng.');
     notes.push('Định lượng 1 con số được lệch ±10%. Có ghi 2 cách (vd 2 viên hoặc 14 g) thì nhập cách nào cũng được.');
     $('rc-note').innerHTML = notes.join('<br>');
     $('rc').classList.add('on');
