@@ -1624,13 +1624,13 @@
     var all = loadVouchers();
     if (!all.some(function(x){ return x.code === v.code; })){
       all.push({ code:v.code, tier:v.tier, playDate:v.playDate, validFrom:v.validFrom, validTo:v.validTo,
-                 used:false, usedAt:null, usedDate:null });
+                 used:false, usedAt:null, usedDate:null, token:v.token || '' });
     }
     var cutoff = addDays(todayStr(), -14); // forget long-expired codes
     saveJSON(VOUCHER_KEY, all.filter(function(x){ return x.validTo >= cutoff; }));
   }
   function issueVoucher(r){
-    addVoucher({ code:r.code, tier:r.tier, playDate:r.date, validFrom:r.validFrom, validTo:r.validTo });
+    addVoucher({ code:r.code, tier:r.tier, playDate:r.date, validFrom:r.validFrom, validTo:r.validTo, token:r.token });
     r.pendingForm = false;
     saveJSON(LAST_KEY, r);
   }
@@ -1815,15 +1815,31 @@
     $('su-error').textContent = err;
     if (err) return;
     var week = r.kind === 'week';
-    var payload = { action:'claim', name:name, phone:phone, birthYear:$('su-year').value, gender:$('su-gender').value,
-                    locality:place, code:r.code, prize:(week ? 'Nhiệm vụ tuần: ' : '') + prizeText(r.tier), score:r.score,
-                    cleared:r.cleared || 0, app:r.app || '', playDate:r.date };
-    var btn = $('su-submit');
+    // A secret kept only on this phone: the sheet lets only the holder mark the code as used.
+    if (!r.token) r.token = Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
+    var btn = $('su-submit'), tries = 0, payload;
     btn.disabled = true; btn.textContent = 'Đang kiểm tra…';
+    function makePayload(){
+      return { action:'claim', name:name, phone:phone, birthYear:$('su-year').value, gender:$('su-gender').value,
+               locality:place, code:r.code, prize:(week ? 'Nhiệm vụ tuần: ' : '') + prizeText(r.tier), score:r.score,
+               cleared:r.cleared || 0, app:r.app || '', playDate:r.date, token:r.token };
+    }
     // The sheet checks the phone number: 1 prize per number per day, max 3 unused codes per number,
     // and 1 weekly-mission prize per number per week.
-    callSheet(payload, 8000).then(function(res){
+    function submit(){ payload = makePayload(); return callSheet(payload, 8000).then(handle); }
+    submit();
+    function handle(res){
+      // Another customer already has this code (3 random digits): take a new number and send again.
+      if (res && res.ok === false && res.reason === 'dup' && tries++ < 3){
+        r.code = r.code.slice(0, 6) + String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+        if (week){ var ww = loadWeek(); ww.code = r.code; saveJSON(WEEK_KEY, ww); } else saveJSON(LAST_KEY, r);
+        return submit();
+      }
       btn.disabled = false; btn.textContent = 'Nhận mã quà';
+      if (res && res.ok === false && res.reason === 'code'){
+        $('su-error').textContent = 'Mã quà không hợp lệ — bạn đưa màn hình này cho nhân viên nha.';
+        return;
+      }
       if (res && res.ok === false && res.reason === 'phone'){
         $('su-error').textContent = 'Số điện thoại chưa đúng (10 số, bắt đầu bằng 0).';
         return;
@@ -1836,7 +1852,7 @@
         if (res && res.ok === false && res.reason === 'weekly') w.blocked = true;
         else {
           if (!res) sendToSheet(payload);
-          addVoucher({ code:r.code, tier:1, playDate:r.date, validFrom:r.validFrom, validTo:r.validTo });
+          addVoucher({ code:r.code, tier:1, playDate:r.date, validFrom:r.validFrom, validTo:r.validTo, token:r.token });
           w.claimed = true;
         }
         saveJSON(WEEK_KEY, w);
@@ -1854,7 +1870,7 @@
       if (!res) sendToSheet(payload); // no answer (offline / slow): issue anyway and send again later
       issueVoucher(r);
       renderResult(r);
-    });
+    }
   });
 
   // POST to the sheet and read its JSON answer; null when offline, slow or unreachable.
@@ -2084,7 +2100,9 @@
         btn.disabled = true;
         btn.querySelector('span').textContent = 'Đang xác nhận…';
         // Ask the sheet first: a code recovered on another phone may already be used there.
-        callSheet({ action:'use', code:code }, 6000).then(function(res){
+        var mine = loadVouchers().filter(function(x){ return x.code === code; })[0];
+        var usePayload = { action:'use', code:code, token:(mine && mine.token) || '' };
+        callSheet(usePayload, 6000).then(function(res){
           // Re-read storage: another tab may already have used this code.
           var all = loadVouchers();
           var v = all.filter(function(x){ return x.code === code; })[0];
@@ -2095,7 +2113,7 @@
             saveJSON(VOUCHER_KEY, all);
             vibrate(60);
           }
-          if (!res) sendToSheet({ action:'use', code:code }); // offline: tell the sheet later
+          if (!res) sendToSheet(usePayload); // offline: tell the sheet later
           renderVouchers();
           refreshBanners();
         });
@@ -2129,14 +2147,16 @@
     btn.disabled = true; btn.textContent = 'Đang tìm…'; msg.textContent = '';
     callSheet({ action:'recover', phone:phone, birthYear:year }, 8000).then(function(res){
       btn.disabled = false; btn.textContent = 'Tìm mã của tôi';
+      if (res && res.reason === 'limit'){ msg.textContent = 'Bạn thử quá nhiều lần rồi — đợi khoảng 1 tiếng rồi thử lại nha.'; return; }
       if (!res || !res.ok){ msg.textContent = 'Chưa kết nối được, bạn thử lại sau ít phút nha.'; return; }
       var all = loadVouchers(), added = 0;
       (res.codes || []).forEach(function(c){
-        if (!all.some(function(v){ return v.code === c.code; })){
+        var have = all.filter(function(v){ return v.code === c.code; })[0];
+        if (!have){
           all.push({ code:c.code, tier:c.tier, playDate:c.playDate, validFrom:c.validFrom, validTo:c.validTo,
-                     used:false, usedAt:null, usedDate:null });
+                     used:false, usedAt:null, usedDate:null, token:c.token || '' });
           added++;
-        }
+        } else if (!have.token && c.token) have.token = c.token;
       });
       saveJSON(VOUCHER_KEY, all);
       msg.className = '';

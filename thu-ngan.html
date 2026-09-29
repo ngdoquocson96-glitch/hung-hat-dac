@@ -139,6 +139,7 @@
     $('pin-msg').textContent = 'Đang kiểm tra…';
     call({ action:'stats', pin:pin }).then(function(res){
       if (!res){ $('pin-msg').textContent = 'Không kết nối được, kiểm tra mạng rồi thử lại.'; return; }
+      if (res.ok === false && res.reason === 'locked'){ $('pin-msg').textContent = 'Nhập sai PIN quá nhiều lần — đợi 15 phút rồi thử lại.'; return; }
       if (res.ok === false && res.reason === 'pin'){ $('pin-msg').textContent = 'PIN không đúng.'; return; }
       $('pin-msg').textContent = '';
       $('pin').value = '';
@@ -193,6 +194,7 @@
     call({ action:'check', code:code, pin:getPin() }).then(function(res){
       $('check-btn').disabled = false; $('check-btn').textContent = 'Tra mã';
       if (!res){ $('code-msg').textContent = 'Không kết nối được, thử lại nha.'; return; }
+      if (res.ok === false && res.reason === 'locked'){ $('code-msg').textContent = 'Hệ thống tạm khóa do nhập sai PIN nhiều lần — thử lại sau 15 phút.'; return; }
       if (res.ok === false && res.reason === 'pin'){ pinRejected(); return; }
       current = code;
       render(res);
@@ -204,6 +206,7 @@
     call({ action:'staffUse', code:current, pin:getPin() }).then(function(res){
       b.disabled = false; b.textContent = '✅ Xác nhận đã dùng';
       if (!res){ $('code-msg').textContent = 'Không kết nối được, chưa xác nhận. Thử lại nha.'; return; }
+      if (res.ok === false && res.reason === 'locked'){ $('code-msg').textContent = 'Hệ thống tạm khóa do nhập sai PIN nhiều lần — thử lại sau 15 phút.'; return; }
       if (res.ok === false && res.reason === 'pin'){ pinRejected(); return; }
       render(res);
     });
@@ -215,6 +218,7 @@
     call({ action:'stats', pin:getPin() }).then(function(res){
       b.disabled = false; b.textContent = '📊 Thống kê 7 ngày';
       if (!res){ $('stats').textContent = 'Không kết nối được.'; return; }
+      if (res.ok === false && res.reason === 'locked'){ $('code-msg').textContent = 'Hệ thống tạm khóa do nhập sai PIN nhiều lần — thử lại sau 15 phút.'; return; }
       if (res.ok === false && res.reason === 'pin'){ pinRejected(); return; }
       var pct = function(a, n){ return n ? Math.round(a * 100 / n) + '%' : '–'; };
       var t = { plays:0, pass2:0, win:0, issued:0, used:0 };
