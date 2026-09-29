@@ -1695,12 +1695,13 @@
         var all = loadVouchers(), code;
         do { code = 'W' + t.slice(8,10) + t.slice(5,7) + '-' + String(Math.floor(Math.random()*1000)).padStart(3,'0'); }
         while (all.some(function(v){ return v.code === code; }));
-        w.code = code; w.codeDate = t;
+        w.code = code; w.codeDate = t; w.token = newToken();
         saveJSON(WEEK_KEY, w);
       }
+      if (!w.token){ w.token = newToken(); saveJSON(WEEK_KEY, w); }
       st.textContent = 'Hoàn thành nhiệm vụ! Điền thông tin để nhận thêm 1 topping 🎁';
       formResult = { kind:'week', tier:1, code:w.code, date:t, validFrom:addDays(t, 1), validTo:addDays(t, CONFIG.validDays),
-                     score:0, cleared:0, app:appName(), pendingForm:true };
+                     score:0, cleared:0, app:appName(), pendingForm:true, token:w.token };
       slot.appendChild(form);
       form.querySelector('.su-title').textContent = 'Điền thông tin để nhận quà nhiệm vụ 🎁';
       form.style.display = 'flex';
@@ -1766,26 +1767,50 @@
   // ---- Sign-up form → Google Sheet ----
   // Rows wait in an outbox on the phone until the network send goes through.
   var OUTBOX_KEY = 'hamichee_hunggame_outbox', sending = false;
+  function newToken(){ return Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4); }
   function sendToSheet(p){
     var box = loadJSON(OUTBOX_KEY, []);
+    p._id = p._id || newToken();
     box.push(p);
     saveJSON(OUTBOX_KEY, box);
     flushOutbox();
   }
+  // One at a time, reading the sheet's answer: a queued prize code can still be refused or clash.
   function flushOutbox(){
     if (sending || !CONFIG.sheetUrl || !window.fetch) return;
-    var box = loadJSON(OUTBOX_KEY, []);
-    if (!box.length) return;
+    var p = loadJSON(OUTBOX_KEY, [])[0];
+    if (!p) return;
     sending = true;
-    // text/plain + no-cors: a "simple" request Google Apps Script accepts from any site
-    fetch(CONFIG.sheetUrl, { method:'POST', mode:'no-cors', headers:{ 'Content-Type':'text/plain;charset=utf-8' },
-                             body: JSON.stringify(box[0]) })
-      .then(function(){
-        var b = loadJSON(OUTBOX_KEY, []); b.shift(); saveJSON(OUTBOX_KEY, b);
-        sending = false;
-        if (b.length) flushOutbox();
-      })
-      .catch(function(){ sending = false; }); // offline: try again next time the page opens
+    callSheet(p, 10000).then(function(res){
+      sending = false;
+      if (!res || (res.ok === false && !res.reason)) return; // still offline / server error: try next time the page opens
+      if (p.action === 'claim' && res.ok === false && res.reason === 'dup' && (p.tries || 0) < 3){
+        // the code was taken meanwhile: give this customer's voucher new digits and send again
+        var nc = p.code.slice(0, 6) + String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+        renameVoucher(p.code, nc);
+        p.code = nc; p.tries = (p.tries || 0) + 1;
+        saveJSON(OUTBOX_KEY, loadJSON(OUTBOX_KEY, []).map(function(x){ return x._id === p._id ? p : x; }));
+        flushOutbox();
+        return;
+      }
+      if (p.action === 'claim') editVoucher(p.code, function(v){
+        if (res.ok && res.token) v.token = res.token;
+        if (res.ok === false) v.unconfirmed = true; // refused (daily/cap/…): staff must check it by hand
+      });
+      saveJSON(OUTBOX_KEY, loadJSON(OUTBOX_KEY, []).filter(function(x){ return x._id !== p._id; }));
+      flushOutbox();
+    });
+  }
+  function editVoucher(code, fn){
+    var all = loadVouchers(), v = all.filter(function(x){ return x.code === code; })[0];
+    if (v){ fn(v); saveJSON(VOUCHER_KEY, all); }
+  }
+  function renameVoucher(oldCode, newCode){
+    editVoucher(oldCode, function(v){ v.code = newCode; });
+    var last = loadJSON(LAST_KEY, null);
+    if (last && last.code === oldCode){ last.code = newCode; saveJSON(LAST_KEY, last); }
+    var wk = loadJSON(WEEK_KEY, null);
+    if (wk && wk.code === oldCode){ wk.code = newCode; saveJSON(WEEK_KEY, wk); }
   }
 
   (function buildForm(){
@@ -1816,7 +1841,8 @@
     if (err) return;
     var week = r.kind === 'week';
     // A secret kept only on this phone: the sheet lets only the holder mark the code as used.
-    if (!r.token) r.token = Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
+    if (!r.token) r.token = newToken();
+    if (week){ var w0 = loadWeek(); w0.token = r.token; saveJSON(WEEK_KEY, w0); } else saveJSON(LAST_KEY, r); // survives a reload mid-send
     var btn = $('su-submit'), tries = 0, payload;
     btn.disabled = true; btn.textContent = 'Đang kiểm tra…';
     function makePayload(){
@@ -1836,6 +1862,13 @@
         return submit();
       }
       btn.disabled = false; btn.textContent = 'Nhận mã quà';
+      if (res && res.ok === false && res.reason === 'dup'){
+        $('su-error').textContent = 'Hệ thống đang bận, bạn bấm "Nhận mã quà" lại sau ít giây nha.';
+        return;
+      }
+      if (res && res.ok && res.token) r.token = res.token; // sent twice (reload): keep the key the sheet has
+      // no answer, or the server failed without a reason: give the code now and send again later
+      var offline = !res || (res.ok === false && !res.reason);
       if (res && res.ok === false && res.reason === 'code'){
         $('su-error').textContent = 'Mã quà không hợp lệ — bạn đưa màn hình này cho nhân viên nha.';
         return;
@@ -1851,7 +1884,7 @@
         var w = loadWeek();
         if (res && res.ok === false && res.reason === 'weekly') w.blocked = true;
         else {
-          if (!res) sendToSheet(payload);
+          if (offline) sendToSheet(payload);
           addVoucher({ code:r.code, tier:1, playDate:r.date, validFrom:r.validFrom, validTo:r.validTo, token:r.token });
           w.claimed = true;
         }
@@ -1867,7 +1900,7 @@
         renderResult(r);
         return;
       }
-      if (!res) sendToSheet(payload); // no answer (offline / slow): issue anyway and send again later
+      if (offline) sendToSheet(payload); // no answer (offline / slow / server error): issue anyway and send again later
       issueVoucher(r);
       renderResult(r);
     }
@@ -2076,6 +2109,11 @@
         s === 'ok' ? '✅ Dùng được hôm nay' :
         s === 'soon' ? '⏳ Chưa dùng được — từ ' + dm(v.validFrom) + ' (lần ghé sau)' :
         'ĐÃ SỬ DỤNG lúc ' + v.usedAt;
+      if (v.unconfirmed && s !== 'used'){
+        var warn = document.createElement('div'); warn.className = 'v-range';
+        warn.textContent = '⚠️ Mã chưa được hệ thống ghi nhận — nhân viên kiểm tra giúp';
+        card.appendChild(warn);
+      }
       if (s === 'ok'){
         var b = document.createElement('button');
         b.type = 'button'; b.className = 'staff-btn';
@@ -2103,6 +2141,11 @@
         var mine = loadVouchers().filter(function(x){ return x.code === code; })[0];
         var usePayload = { action:'use', code:code, token:(mine && mine.token) || '' };
         callSheet(usePayload, 6000).then(function(res){
+          if (res && res.ok === false && res.reason === 'token'){
+            btn.disabled = false;
+            btn.querySelector('span').textContent = 'Mã này đang giữ ở máy khác — nhân viên tra mã ở trang thu ngân';
+            return;
+          }
           // Re-read storage: another tab may already have used this code.
           var all = loadVouchers();
           var v = all.filter(function(x){ return x.code === code; })[0];
@@ -2113,7 +2156,7 @@
             saveJSON(VOUCHER_KEY, all);
             vibrate(60);
           }
-          if (!res) sendToSheet(usePayload); // offline: tell the sheet later
+          if (!res || (res.ok === false && !res.reason)) sendToSheet(usePayload); // offline / server error: tell the sheet later
           renderVouchers();
           refreshBanners();
         });

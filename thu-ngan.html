@@ -118,6 +118,7 @@
       new Promise(function(res){ setTimeout(function(){ res(null); }, 15000); })
     ]).then(function(res){
       if (res && res.reason === 'retry') return retried ? null : call(payload, true);
+      if (res && res.ok === false && res.error) return null; // server error → "không kết nối được, thử lại"
       return res;
     });
   }
