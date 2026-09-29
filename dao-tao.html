@@ -570,16 +570,30 @@
     renderDaily();
   }
   // Staff names: a dropdown when the manager filled the "Nhân viên" tab (no "Lan"/"lan" duplicates)
+  // …plus "Tên khác (tự điền)" for someone not on the list yet (new staff, trial day).
+  var OTHER = '__other';
   function renderStaff(){
     var staff = loadJSON(K.staff, []), sel = $('name-sel'), cur = load(K.name) || '';
     if (!staff.length){ sel.hidden = true; $('name').hidden = false; $('name').value = cur; return; }
-    sel.innerHTML = '<option value="">— Chọn tên của em —</option>' + staff.map(function(s){ return '<option>' + esc(s) + '</option>'; }).join('');
-    sel.value = staff.indexOf(cur) >= 0 ? cur : '';
-    sel.hidden = false; $('name').hidden = true;
+    sel.innerHTML = '<option value="">— Chọn tên của em —</option>' + staff.map(function(s){ return '<option>' + esc(s) + '</option>'; }).join('') +
+                    '<option value="' + OTHER + '">✍️ Tên khác (tự điền)</option>';
+    var typed = cur && staff.indexOf(cur) < 0;
+    sel.value = typed ? OTHER : (staff.indexOf(cur) >= 0 ? cur : '');
+    sel.hidden = false;
+    $('name').hidden = !typed; $('name').value = typed ? cur : '';
   }
-  function playerName(){ return ($('name-sel').hidden ? $('name').value : $('name-sel').value).trim().replace(/\s+/g, ' '); }
+  function playerName(){
+    var sel = $('name-sel');
+    var v = sel.hidden || sel.value === OTHER ? $('name').value : sel.value;
+    return v.trim().replace(/\s+/g, ' ');
+  }
   $('name').addEventListener('input', function(){ store(K.name, playerName()); $('home-msg').textContent = ''; });
-  $('name-sel').addEventListener('change', function(){ store(K.name, playerName()); $('home-msg').textContent = ''; });
+  $('name-sel').addEventListener('change', function(){
+    var other = this.value === OTHER;
+    $('name').hidden = !other;
+    if (other){ $('name').value = ''; $('name').focus(); }
+    store(K.name, playerName()); $('home-msg').textContent = '';
+  });
 
   // Daily challenge: 3 dishes picked by the date, the same for everyone
   function dailyLevel(){ var t = todayIso(); return 'Thử thách ' + t.slice(8, 10) + '/' + t.slice(5, 7); }
