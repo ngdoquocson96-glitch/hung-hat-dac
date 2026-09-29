@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>HAMICHEE — Tiệm Chè Hami (đào tạo pha chế)</title>
+<style>
+  :root{ --green:#00783E; --green-dark:#00542b; --orange:#FAA627; --yellow:#FFCC4E; --cream:#F1E5D6; --red:#d93a3a; --ink:#2a2a2a; }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; background:var(--cream); font-family:'Segoe UI', Roboto, Arial, sans-serif; color:var(--ink);
+             overflow:hidden; overscroll-behavior:none; -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; }
+  html{ touch-action:manipulation; }
+  button{ font:inherit; cursor:pointer; }
+  #app{ position:relative; max-width:520px; margin:0 auto; height:100vh; height:100dvh; display:flex; flex-direction:column; background:var(--cream); overflow:hidden; }
+  .screen{ display:none; flex:1; flex-direction:column; min-height:0; }
+  .screen.active{ display:flex; }
+  .btn{ background:var(--green); color:#fff; border:none; border-radius:14px; padding:12px 18px; font-size:16px; font-weight:bold; box-shadow:0 3px 0 var(--green-dark); }
+  .btn:active{ transform:translateY(2px); box-shadow:0 1px 0 var(--green-dark); }
+  .btn.orange{ background:var(--orange); box-shadow:0 3px 0 #c7801a; }
+  .btn.soft{ background:#fff; color:var(--green-dark); border:2px solid var(--green); box-shadow:none; }
+  .btn:disabled{ background:#bbb; box-shadow:none; }
+  input.field{ width:100%; font-size:18px; padding:10px 12px; border:2px solid #cdbfa9; border-radius:12px; background:#fffdf9; -webkit-user-select:text; user-select:text; }
+  input.field:focus{ outline:none; border-color:var(--orange); }
+  .msg{ color:var(--red); font-weight:bold; font-size:14px; min-height:18px; }
+
+  /* ---- PIN + home ---- */
+  .pad{ padding:18px 16px calc(18px + env(safe-area-inset-bottom)); overflow-y:auto; gap:12px; }
+  .brand{ color:var(--green); font-weight:bold; font-size:13px; letter-spacing:.06em; }
+  h1{ margin:0; color:var(--green); font-size:24px; }
+  .hello{ display:flex; gap:10px; align-items:flex-end; background:#fff; border-radius:16px; padding:10px 12px; }
+  .hello img{ width:62px; height:120px; object-fit:contain; flex:none; }
+  .hello p{ margin:0 0 8px; font-size:14px; line-height:1.5; }
+  .card{ background:#fff; border-radius:16px; padding:12px 14px; display:flex; flex-direction:column; gap:8px; }
+  .label{ font-size:13px; font-weight:bold; color:#555; }
+  .modes{ display:flex; gap:8px; }
+  .mode{ flex:1; border:2px solid #d8cbb6; background:#fffdf9; border-radius:14px; padding:8px 10px; text-align:left; }
+  .mode b{ display:block; font-size:16px; color:var(--green-dark); }
+  .mode span{ font-size:12px; color:#666; }
+  .mode.on{ border-color:var(--green); background:#e9f5ee; }
+  .levels{ display:flex; flex-direction:column; gap:8px; }
+  .lv{ display:flex; align-items:center; gap:10px; background:#fff; border:2px solid #e3d6c3; border-radius:14px; padding:10px 12px; text-align:left; }
+  .lv .n{ width:34px; height:34px; border-radius:50%; background:var(--green); color:#fff; font-weight:bold; display:flex; align-items:center; justify-content:center; flex:none; }
+  .lv .t{ flex:1; }
+  .lv .t b{ display:block; font-size:15.5px; }
+  .lv .t span{ font-size:12px; color:#666; }
+  .lv .s{ font-size:15px; letter-spacing:1px; white-space:nowrap; }
+  .lv.rush .n{ background:var(--red); }
+  .link{ background:none; border:none; color:var(--green-dark); text-decoration:underline; font-size:14px; padding:6px; }
+
+  /* ---- Play ---- */
+  #hud{ display:flex; align-items:center; gap:8px; padding:8px 12px; background:var(--green); color:#fff; font-size:13px; font-weight:bold; }
+  #hud .grow{ flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #hud button{ background:rgba(255,255,255,.18); border:none; color:#fff; border-radius:10px; padding:4px 10px; font-size:13px; }
+  #customer{ display:flex; gap:10px; align-items:flex-start; padding:10px 12px 6px; }
+  #cust-face{ font-size:44px; line-height:1; flex:none; transition:transform .2s; }
+  #bubble{ flex:1; background:#fff; border-radius:16px; padding:8px 12px; position:relative; box-shadow:0 2px 6px rgba(0,0,0,.08); }
+  #bubble::before{ content:''; position:absolute; left:-8px; top:16px; border:8px solid transparent; border-right-color:#fff; border-left:0; }
+  #order-name{ font-weight:bold; font-size:16.5px; color:var(--green-dark); }
+  #order-meta{ display:flex; gap:6px; flex-wrap:wrap; margin-top:4px; font-size:12.5px; }
+  .tag{ border-radius:10px; padding:2px 8px; font-weight:bold; }
+  .tag.in{ background:#e3f2ff; color:#1d5fa8; }
+  .tag.out{ background:#fff0d6; color:#a15c00; }
+  .tag.v{ background:#f1ece4; color:#6a5a44; }
+  #timer-row{ display:flex; align-items:center; gap:8px; margin-top:6px; }
+  #timebar{ flex:1; height:8px; border-radius:4px; background:#eee; overflow:hidden; }
+  #timebar i{ display:block; height:100%; width:100%; background:var(--green); transition:width .25s linear, background .3s; }
+  #timetext{ font-size:13px; font-weight:bold; min-width:64px; text-align:right; font-variant-numeric:tabular-nums; }
+  #timetext.late{ color:var(--red); }
+  #bowl{ margin:4px 12px; background:#fff; border:2px dashed #cdbfa9; border-radius:16px; padding:8px 10px; min-height:84px; max-height:26vh; overflow-y:auto; }
+  #bowl-head{ display:flex; align-items:center; gap:6px; font-size:12.5px; color:#777; margin-bottom:4px; }
+  #bowl-icon{ font-size:22px; }
+  #added{ display:flex; flex-wrap:wrap; gap:6px; }
+  .chip{ display:flex; align-items:center; gap:4px; background:#f7f1e7; border-radius:12px; padding:4px 4px 4px 8px; font-size:13px; }
+  .chip b{ color:var(--green-dark); }
+  .chip .x{ border:none; background:#e8dccb; border-radius:50%; width:22px; height:22px; font-size:12px; line-height:22px; padding:0; color:#6a5a44; }
+  .chip .no{ font-size:11px; color:#999; }
+  .empty{ color:#999; font-size:13px; }
+  #tabs{ display:flex; gap:6px; padding:6px 12px 4px; overflow-x:auto; scrollbar-width:none; }
+  #tabs::-webkit-scrollbar{ display:none; }
+  .tab{ flex:none; border:none; background:#e8dccb; color:#5c4d38; border-radius:14px; padding:6px 12px; font-size:13px; font-weight:bold; }
+  .tab.on{ background:var(--green); color:#fff; }
+  #shelf{ flex:1; min-height:0; overflow-y:auto; padding:4px 12px 8px; display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; align-content:start; }
+  .bin{ background:#fff; border:2px solid #e3d6c3; border-radius:14px; padding:6px 2px 5px; display:flex; flex-direction:column; align-items:center; gap:2px; min-height:74px; }
+  .bin:active{ border-color:var(--orange); transform:scale(.96); }
+  .bin .e{ font-size:26px; line-height:1.1; }
+  .bin .nm{ font-size:11px; line-height:1.2; text-align:center; color:#333; }
+  #actions{ display:flex; gap:8px; padding:8px 12px calc(8px + env(safe-area-inset-bottom)); background:#efe3d1; }
+  #actions .btn{ padding:11px 10px; font-size:15px; }
+  #btn-serve{ flex:1; }
+
+  /* ---- Modals ---- */
+  .modal{ display:none; position:absolute; inset:0; z-index:20; background:rgba(20,30,20,.55); align-items:flex-end; justify-content:center; }
+  .modal.on{ display:flex; }
+  .sheet{ width:100%; background:#fff; border-radius:20px 20px 0 0; padding:14px 14px calc(14px + env(safe-area-inset-bottom)); max-height:92%; overflow-y:auto; display:flex; flex-direction:column; gap:10px; }
+  .kp-title{ display:flex; align-items:center; gap:8px; font-size:17px; }
+  .kp-title .e{ font-size:30px; }
+  #kp-display{ display:flex; align-items:baseline; justify-content:center; gap:8px; background:#f7f1e7; border-radius:14px; padding:8px; }
+  #kp-val{ font-size:40px; font-weight:bold; color:var(--green-dark); font-variant-numeric:tabular-nums; min-width:60px; text-align:right; }
+  #kp-unit{ font-size:22px; font-weight:bold; color:#8a6a22; }
+  #kp-units{ display:flex; flex-wrap:wrap; gap:6px; justify-content:center; }
+  .u{ border:2px solid #e3d6c3; background:#fff; border-radius:12px; padding:4px 10px; font-size:14px; font-weight:bold; color:#6a5a44; }
+  .u.on{ border-color:var(--green); background:#e9f5ee; color:var(--green-dark); }
+  #kp-keys{ display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; }
+  #kp-keys button{ border:none; background:#f1ece4; border-radius:12px; padding:12px 0; font-size:22px; font-weight:bold; color:#333; }
+  #kp-keys button:active{ background:#e2d8c8; }
+  #kp-keys .wide{ grid-column:span 2; }
+  .row{ display:flex; gap:8px; }
+  .row .btn{ flex:1; }
+  #rv-head{ display:flex; gap:10px; align-items:center; }
+  #rv-head img{ width:50px; height:96px; object-fit:contain; flex:none; }
+  #rv-title{ font-size:20px; font-weight:bold; }
+  #rv-title.ok{ color:var(--green); } #rv-title.bad{ color:var(--red); }
+  #rv-sub{ font-size:13.5px; color:#555; }
+  .rv-list{ display:flex; flex-direction:column; gap:4px; }
+  .rv{ display:flex; gap:8px; align-items:flex-start; font-size:14px; padding:6px 8px; border-radius:10px; background:#f6fbf7; }
+  .rv.bad{ background:#fdeeee; }
+  .rv .i{ flex:none; width:20px; text-align:center; }
+  .rv small{ display:block; color:#666; font-size:12.5px; }
+  .note{ background:#fff7e0; border-radius:12px; padding:8px 10px; font-size:13.5px; line-height:1.45; }
+  .rc-list{ display:flex; flex-direction:column; gap:3px; font-size:14.5px; }
+  .rc-list div{ display:flex; justify-content:space-between; gap:10px; border-bottom:1px dashed #eee; padding:4px 0; }
+  .rc-list b{ color:var(--green-dark); white-space:nowrap; }
+  #toast{ position:absolute; left:16px; right:16px; top:40%; z-index:30; text-align:center; pointer-events:none; background:rgba(0,84,43,.92); color:#fff;
+          font-weight:bold; padding:10px 12px; border-radius:14px; opacity:0; transition:opacity .2s; }
+  #toast.on{ opacity:1; }
+
+  /* ---- Level end ---- */
+  #screen-end{ align-items:center; text-align:center; }
+  .stars{ font-size:40px; letter-spacing:4px; }
+  .big{ font-size:44px; font-weight:bold; color:var(--orange); }
+  .mist{ text-align:left; width:100%; background:#fff; border-radius:14px; padding:10px 12px; font-size:13.5px; line-height:1.5; max-height:30vh; overflow-y:auto; }
+  [hidden]{ display:none !important; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- PIN (recipes are private: they come from the shop's Google Sheet) -->
+  <div class="screen pad" id="screen-pin">
+    <div class="brand">HAMICHEE · ĐÀO TẠO PHA CHẾ</div>
+    <h1>Tiệm Chè Hami 🍧</h1>
+    <form class="card" id="pin-form" autocomplete="off">
+      <div class="label">Nhập PIN đào tạo (quản lý đưa)</div>
+      <input class="field" id="pin" type="password" inputmode="numeric" maxlength="8" placeholder="••••••">
+      <div class="msg" id="pin-msg"></div>
+      <button class="btn" type="submit">Vào bếp ▶</button>
+    </form>
+  </div>
+
+  <!-- Home -->
+  <div class="screen pad" id="screen-home">
+    <div class="brand">HAMICHEE · ĐÀO TẠO PHA CHẾ</div>
+    <h1>Tiệm Chè Hami 🍧</h1>
+    <div class="hello">
+      <img src="assets/vo-che-sprite.png?v=2" alt="Chị Chè">
+      <div>
+        <p><b>Chị Chè đây!</b> Khách gọi món nào, em bấm lấy đúng nguyên liệu, nhập đúng định lượng theo SOP rồi bấm <b>Ra món</b> nha.</p>
+        <p style="font-size:12.5px;color:#666">Lệch ±10% vẫn tính đúng. Ăn tại chỗ: cốt dừa cho <b>trước</b> · Mang về: cốt dừa cho <b>sau cùng</b>.</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">Tên của em</div>
+      <input class="field" id="name" maxlength="30" placeholder="Vd: Lan" autocomplete="off">
+      <div class="label">Chế độ</div>
+      <div class="modes">
+        <button type="button" class="mode" data-mode="hoc"><b>📖 Học</b><span>Được xem công thức, không tính trễ</span></button>
+        <button type="button" class="mode" data-mode="thi"><b>⏱️ Thi</b><span>Không xem công thức, tính giờ KPI</span></button>
+      </div>
+      <div class="msg" id="home-msg"></div>
+    </div>
+    <div class="levels" id="levels"></div>
+    <button type="button" class="link" id="btn-book">📒 Xem sổ công thức</button>
+  </div>
+
+  <!-- Play -->
+  <div class="screen" id="screen-play">
+    <div id="hud"><span class="grow" id="hud-level"></span><span id="hud-count"></span><span id="hud-score"></span><button type="button" id="btn-quit">✕</button></div>
+    <div id="customer">
+      <div id="cust-face">🧑</div>
+      <div id="bubble">
+        <div id="order-name"></div>
+        <div id="order-meta"></div>
+        <div id="timer-row"><div id="timebar"><i></i></div><span id="timetext"></span></div>
+      </div>
+    </div>
+    <div id="bowl">
+      <div id="bowl-head"><span id="bowl-icon">🥣</span><span id="bowl-text">Chưa cho gì</span></div>
+      <div id="added"></div>
+    </div>
+    <div id="tabs"></div>
+    <div id="shelf"></div>
+    <div id="actions">
+      <button type="button" class="btn soft" id="btn-reset">🗑 Đổ</button>
+      <button type="button" class="btn soft" id="btn-recipe">📖 SOP</button>
+      <button type="button" class="btn orange" id="btn-serve">✅ Ra món</button>
+    </div>
+  </div>
+
+  <!-- Level end -->
+  <div class="screen pad" id="screen-end">
+    <h1 id="end-title"></h1>
+    <div class="stars" id="end-stars"></div>
+    <div class="big" id="end-score"></div>
+    <div id="end-sub"></div>
+    <div class="mist" id="end-mist"></div>
+    <div id="end-save" style="font-size:13px;color:#666"></div>
+    <div class="row" style="width:100%">
+      <button type="button" class="btn soft" id="btn-home">🏠 Chọn màn</button>
+      <button type="button" class="btn" id="btn-again">🔁 Chơi lại</button>
+    </div>
+  </div>
+
+  <!-- Keypad: how much to scoop -->
+  <div class="modal" id="kp">
+    <div class="sheet">
+      <div class="kp-title"><span class="e" id="kp-emoji"></span><b id="kp-name"></b></div>
+      <div id="kp-display"><span id="kp-val">0</span><span id="kp-unit">g</span></div>
+      <div id="kp-units"></div>
+      <div id="kp-keys">
+        <button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button><button type="button" data-k="del">⌫</button>
+        <button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button><button type="button" data-k=",">,</button>
+        <button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button><button type="button" data-k="half">½</button>
+        <button type="button" data-k="0" class="wide">0</button><button type="button" data-k="fill" class="wide" style="font-size:16px">Vừa đủ</button>
+      </div>
+      <div class="row">
+        <button type="button" class="btn soft" id="kp-cancel">Huỷ</button>
+        <button type="button" class="btn" id="kp-ok">Cho vào ✓</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Review after serving -->
+  <div class="modal" id="rv">
+    <div class="sheet">
+      <div id="rv-head">
+        <img src="assets/vo-che-sprite.png?v=2" alt="">
+        <div><div id="rv-title"></div><div id="rv-sub"></div></div>
+      </div>
+      <div class="rv-list" id="rv-list"></div>
+      <button type="button" class="btn" id="rv-next">Khách tiếp theo ▶</button>
+    </div>
+  </div>
+
+  <!-- Recipe card (study mode + recipe book) -->
+  <div class="modal" id="rc">
+    <div class="sheet">
+      <div class="kp-title"><span class="e" id="rc-emoji">📖</span><b id="rc-name"></b></div>
+      <div id="rc-meta" style="font-size:13px;color:#666"></div>
+      <div class="rc-list" id="rc-list"></div>
+      <div class="note" id="rc-note"></div>
+      <div id="rc-book" hidden></div>
+      <button type="button" class="btn soft" id="rc-close">Đóng</button>
+    </div>
+  </div>
+
+  <div id="toast" role="status"></div>
+</div>
+
+<script>
+(function(){
+  var API = 'https://script.google.com/macros/s/AKfycbz53HiMjoKMbZh6ZBtPu6DHh9YEdgP-ro5ubKj-cOmN2J27RpvKFAB-Jei7Mum6KveeWA/exec';
+  var K = { pin:'hmc_train_pin', rows:'hmc_train_rows', name:'hmc_train_name', mode:'hmc_train_mode', best:'hmc_train_best', outbox:'hmc_train_outbox' };
+  var ORDERS_PER_LEVEL = 6, RUSH_ORDERS = 8, TOL = 0.10; // ±10% cho định lượng 1 con số
+  var UNITS = ['g', 'ml', 'viên', 'vá', 'miếng', 'trái', 'muỗng', 'xịt', 'gói', 'cái', 'sợi'];
+  var FACES = ['🧑', '👩', '👨', '👧', '🧒', '👵', '👴', '🧑‍🦱', '👩‍🦰', '🧔', '👱‍♀️', '👨‍🦳'];
+  var RUSH = 'Giờ cao điểm';
+
+  function $(id){ return document.getElementById(id); }
+  function load(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
+  function store(k, v){ try { localStorage.setItem(k, v); } catch(e){} }
+  function loadJSON(k, f){ try { var v = JSON.parse(load(k)); return v == null ? f : v; } catch(e){ return f; } }
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]; }); }
+  function num(s){ return parseFloat(String(s).replace(',', '.')); }
+  function fmt(n){ return (Math.round(n * 100) / 100).toString().replace('.', ','); }
+  function shuffle(a){ for (var i = a.length - 1; i > 0; i--){ var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  var screens = ['pin', 'home', 'play', 'end'];
+  function show(n){ screens.forEach(function(s){ $('screen-' + s).classList.toggle('active', s === n); }); }
+  var toastT = null;
+  function toast(m){ var t = $('toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(function(){ t.classList.remove('on'); }, 1600); }
+
+  // ---- Server (same Google Apps Script as the customer game) ----
+  function call(payload, retried){
+    return Promise.race([
+      fetch(API, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' }, body:JSON.stringify(payload) })
+        .then(function(r){ return r.json(); }).catch(function(){ return { reason:'retry' }; }),
+      new Promise(function(res){ setTimeout(function(){ res(null); }, 20000); })
+    ]).then(function(res){
+      if (res && res.reason === 'retry') return retried ? null : call(payload, true);
+      return res;
+    });
+  }
+
+  // ---- Recipes: rows of the "Công thức" sheet → dishes ----
+  // [Nhóm, Mã món, Tên món, KPI (giây), Luật cốt dừa, Vật dụng, Nguyên liệu, Định lượng, Chỉ khi]
+  var DATA = null;
+  function parseQty(s){
+    s = String(s || '').trim();
+    if (!s) return [];
+    return s.split('|').map(function(p){
+      var m = /^(\d+(?:[.,]\d+)?)(?:\s*-\s*(\d+(?:[.,]\d+)?))?\s*(.+)$/.exec(p.trim());
+      if (!m) return null;
+      var a = num(m[1]), b = m[2] ? num(m[2]) : a;
+      return { min:a, max:b, range:!!m[2], u:m[3].trim() };
+    }).filter(Boolean);
+  }
+  function qtyText(alts){
+    if (!alts.length) return 'vừa đủ';
+    return alts.map(function(a){ return (a.range ? fmt(a.min) + '–' + fmt(a.max) : fmt(a.min)) + ' ' + a.u; }).join(' hoặc ');
+  }
+  function build(rows){
+    var dishes = [], byCode = {}, groups = [], ings = {};
+    rows.slice(1).forEach(function(r){
+      if (!r[1] || !r[6]) return;
+      var d = byCode[r[1]];
+      if (!d){
+        d = byCode[r[1]] = { group:r[0], code:r[1], name:r[2], kpi:parseInt(r[3], 10) || 120, rule:/^c/i.test(r[4]), vessel:r[5], items:[] };
+        dishes.push(d);
+        if (groups.indexOf(r[0]) < 0) groups.push(r[0]);
+      }
+      var alts = parseQty(r[7]), only = String(r[8] || '').trim().toLowerCase();
+      d.items.push({ ing:r[6], alts:alts, only:/mang/.test(only) ? 'out' : (/chỗ|cho/.test(only) ? 'in' : '') });
+      var g = ings[r[6]] || (ings[r[6]] = { name:r[6], unit:'', any:false, groups:{} });
+      if (alts.length){ g.any = true; if (!g.unit) g.unit = alts[0].u; }
+      g.groups[r[0]] = 1;
+    });
+    return { dishes:dishes, groups:groups, ings:ings };
+  }
+
+  // ---- Looks of the shelf ----
+  var EMOJI = [
+    [/^Cốt dừa/, '🥥'], [/^Cốt trà sữa/, '🧋'], [/^Trà lài/, '🍵'], [/^Nước sâm/, '🍵'], [/^Nước dừa/, '🥥'], [/^Nước chè/, '🍯'], [/^Nước khúc/, '🌈'],
+    [/^Nước ngâm xoài/, '🥭'], [/^Nước ngâm dâu/, '🫐'], [/^Nước ngâm/, '🍍'], [/^Sữa chua/, '🥣'], [/^Sữa tươi/, '🥛'], [/^Sữa đặc/, '🥫'],
+    [/^Syrup đường đen/, '🟫'], [/^Syrup/, '🍯'], [/^Kem béo/, '🍦'], [/^Café/, '☕'], [/^Mãng cầu/, '🍈'], [/^Sốt me/, '🟤'],
+    [/^Thạch socola/, '🍫'], [/^Thạch lá dứa|^Thạch xanh/, '🟩'], [/^Thạch dừa|^Thạch trắng/, '⬜'], [/^Thạch củ năng/, '🔷'], [/^Thạch mít/, '🟨'],
+    [/^Thạch phô mai/, '🧀'], [/^Thạch sợi/, '🍜'], [/^Khúc bạch cầu vồng/, '🌈'], [/^Khúc bạch/, '🍮'], [/^Sương sáo/, '⬛'],
+    [/^Hạt đác chanh dây/, '🟡'], [/^Hạt đác dâu/, '🟣'], [/^Hạt đác thơm|^Hạt đác rim thơm/, '🍍'], [/^Hạt đác rim/, '🟠'], [/^Hạt đác/, '⚪'],
+    [/^Trân châu đen/, '⚫'], [/^Trân châu dừa/, '🤍'], [/^Trân châu 3Q/, '🟤'], [/^Bánh lọt/, '🟢'], [/^Khoai dẻo|^Sốt khoai/, '🍠'],
+    [/^Dừa/, '🥥'], [/^Hạt sen/, '🌰'], [/^Phổ tai/, '🌿'], [/^Táo/, '🔴'], [/^Hạnh nhân/, '🌰'], [/^Đậu phộng/, '🥜'], [/^Flan/, '🍮'],
+    [/^Milo/, '🍫'], [/^Bánh gấu/, '🐻'], [/^Sầu riêng/, '🍈'], [/^Mít/, '🟨'], [/^Nhãn/, '🟤'], [/^Vải/, '🔴'], [/^Tắc|^Sốt tắc/, '🍋'],
+    [/^Xoài|^Sốt xoài/, '🥭'], [/^Dâu tằm/, '🫐'], [/^Trái cây/, '🍍'], [/^Sốt socola/, '🍫'], [/^Chè/, '🍲'], [/^Đá bào/, '❄️'], [/^Đá/, '🧊'], [/^Lắc/, '🥤']
+  ];
+  function emo(n){ for (var i = 0; i < EMOJI.length; i++) if (EMOJI[i][0].test(n)) return EMOJI[i][1]; return '🥄'; }
+  function cat(n){
+    if (/^Chè /.test(n)) return 'Chè nấu';
+    if (/^(Thạch|Khúc bạch|Sương sáo)/.test(n)) return 'Thạch';
+    if (/^(Đá|Lắc)/.test(n)) return 'Đá & lắc';
+    if (/^(Cốt|Trà lài|Nước|Sữa|Syrup|Kem béo|Café|Mãng cầu dằm|Sốt me)/.test(n)) return 'Nước & nền';
+    if (/^(Sầu riêng|Mít|Nhãn|Vải|Tắc|Xoài|Dâu tằm|Trái cây|Sốt)/.test(n)) return 'Trái cây & sốt';
+    return 'Topping';
+  }
+  var CAT_ORDER = ['Nước & nền', 'Thạch', 'Topping', 'Trái cây & sốt', 'Chè nấu', 'Đá & lắc'];
+  function vesselIcon(v){ return /mâm/i.test(v) ? '🍱' : /đĩa/i.test(v) ? '🍽️' : /^ly/i.test(v) ? '🥤' : '🥣'; }
+
+  // ---- Grading ----
+  function sameUnit(a, b){ a = a === 'ml' ? 'g' : a; b = b === 'ml' ? 'g' : b; return a === b; } // 1 ml ≈ 1 g
+  function need(dish, where){ return dish.items.filter(function(it){ return !it.only || it.only === where; }); }
+  function grade(o){
+    var dish = o.dish, items = need(dish, o.where), lines = [], ok = true, by = {};
+    o.added.forEach(function(a){ (by[a.ing] = by[a.ing] || []).push(a); });
+    items.forEach(function(it){
+      var got = by[it.ing];
+      if (!got){ ok = false; lines.push({ ok:false, text:'Thiếu ' + it.ing, sub:'Chuẩn: ' + qtyText(it.alts) }); return; }
+      var gotText = got.map(function(a){ return a.qty == null ? 'vừa đủ' : fmt(a.qty) + ' ' + a.u; }).join(' + ');
+      var good = true;
+      if (it.alts.length){
+        var units = {}, fill = false;
+        got.forEach(function(a){ if (a.qty == null) fill = true; else { var u = a.u === 'ml' ? 'g' : a.u; units[u] = (units[u] || 0) + a.qty; } });
+        var keys = Object.keys(units);
+        good = !fill && keys.length === 1 && it.alts.some(function(al){
+          if (!sameUnit(al.u, keys[0])) return false;
+          var v = units[keys[0]];
+          return al.range ? (v >= al.min - 1e-9 && v <= al.max + 1e-9) : Math.abs(v - al.min) <= al.min * TOL + 1e-9;
+        });
+      }
+      if (!good) ok = false;
+      lines.push({ ok:good, text:it.ing + ': ' + gotText, sub:good ? '' : 'Chuẩn: ' + qtyText(it.alts) });
+    });
+    Object.keys(by).forEach(function(ing){
+      if (!items.some(function(it){ return it.ing === ing; })){ ok = false; lines.push({ ok:false, text:'Thừa ' + ing, sub:'Món này không có ' + ing }); }
+    });
+    if (dish.rule && by['Cốt dừa']){
+      var first = o.added[0].ing === 'Cốt dừa', last = o.added[o.added.length - 1].ing === 'Cốt dừa';
+      var rOk = o.where === 'in' ? first : last;
+      if (!rOk) ok = false;
+      lines.push({ ok:rOk, text:o.where === 'in' ? 'Ăn tại chỗ: cốt dừa cho trước' : 'Mang về: cốt dừa cho sau cùng',
+                   sub:rOk ? '' : (o.where === 'in' ? 'Em chưa cho cốt dừa đầu tiên' : 'Em chưa để cốt dừa cuối cùng') });
+    }
+    return { ok:ok, lines:lines };
+  }
+
+  // ---- Home ----
+  var mode = load(K.mode) === 'thi' ? 'thi' : 'hoc';
+  function renderModes(){
+    Array.prototype.forEach.call(document.querySelectorAll('.mode'), function(b){ b.classList.toggle('on', b.getAttribute('data-mode') === mode); });
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.mode'), function(b){
+    b.addEventListener('click', function(){ mode = b.getAttribute('data-mode'); store(K.mode, mode); renderModes(); renderLevels(); });
+  });
+  function starText(n){ return n == null ? '' : '★★★'.slice(0, n) + '☆☆☆'.slice(0, 3 - n); }
+  function renderLevels(){
+    var best = loadJSON(K.best, {}), box = $('levels');
+    box.innerHTML = '';
+    DATA.groups.concat([RUSH]).forEach(function(g, i){
+      var n = g === RUSH ? RUSH_ORDERS : ORDERS_PER_LEVEL;
+      var count = g === RUSH ? DATA.dishes.length : DATA.dishes.filter(function(d){ return d.group === g; }).length;
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'lv' + (g === RUSH ? ' rush' : '');
+      b.innerHTML = '<span class="n"></span><span class="t"><b></b><span></span></span><span class="s"></span>';
+      b.querySelector('.n').textContent = g === RUSH ? '🔥' : i + 1;
+      b.querySelector('b').textContent = g;
+      b.querySelector('.t span').textContent = count + ' món · ' + n + ' khách' + (g === RUSH ? ' · trộn mọi món' : '');
+      b.querySelector('.s').textContent = starText(best[mode + '|' + g]);
+      b.addEventListener('click', function(){ startLevel(g); });
+      box.appendChild(b);
+    });
+  }
+  $('name').value = load(K.name) || '';
+  $('name').addEventListener('input', function(){ store(K.name, this.value.trim()); $('home-msg').textContent = ''; });
+
+  // ---- PIN / loading ----
+  function ready(rows){
+    DATA = build(rows);
+    if (!DATA.dishes.length){ $('pin-msg').textContent = 'Chưa có công thức trong Sheet.'; show('pin'); return false; }
+    renderModes(); renderLevels(); show('home');
+    return true;
+  }
+  $('pin-form').addEventListener('submit', function(e){
+    e.preventDefault();
+    var pin = $('pin').value.trim();
+    if (!pin){ $('pin-msg').textContent = 'Nhập PIN nha.'; return; }
+    $('pin-msg').textContent = 'Đang mở bếp…';
+    call({ action:'recipes', pin:pin }).then(function(res){
+      if (!res){ $('pin-msg').textContent = 'Không kết nối được, thử lại nha.'; return; }
+      if (!res.ok){ $('pin-msg').textContent = 'PIN không đúng.'; return; }
+      store(K.pin, pin); store(K.rows, JSON.stringify(res.rows));
+      $('pin-msg').textContent = ''; $('pin').value = '';
+      ready(res.rows);
+    });
+  });
+
+  // ---- Play ----
+  var P = null, tick = null;
+  function startLevel(g){
+    var name = $('name').value.trim();
+    if (name.length < 2){ $('home-msg').textContent = 'Nhập tên của em trước nha.'; $('name').focus(); return; }
+    var pool = g === RUSH ? DATA.dishes.slice() : DATA.dishes.filter(function(d){ return d.group === g; });
+    var n = g === RUSH ? RUSH_ORDERS : ORDERS_PER_LEVEL, bag = [], orders = [];
+    while (orders.length < n){ if (!bag.length) bag = shuffle(pool.slice()); orders.push(bag.pop()); }
+    var shelfIngs = Object.keys(DATA.ings).filter(function(k){ return g === RUSH || DATA.ings[k].groups[g]; });
+    P = { level:g, name:name, mode:mode, orders:orders, idx:-1, results:[], score:0, shelf:shelfIngs, tab:null };
+    buildShelf();
+    show('play');
+    guardBack(true);
+    nextOrder();
+  }
+  function buildShelf(){
+    var cats = {};
+    P.shelf.forEach(function(n){ (cats[cat(n)] = cats[cat(n)] || []).push(n); });
+    P.cats = CAT_ORDER.filter(function(c){ return cats[c]; }).map(function(c){ return { name:c, items:cats[c].sort(function(a, b){ return a.localeCompare(b, 'vi'); }) }; });
+    P.tab = P.cats[0].name;
+    renderTabs(); renderShelf();
+  }
+  function renderTabs(){
+    var t = $('tabs'); t.innerHTML = '';
+    P.cats.forEach(function(c){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'tab' + (c.name === P.tab ? ' on' : ''); b.textContent = c.name;
+      b.addEventListener('click', function(){ P.tab = c.name; renderTabs(); renderShelf(); $('shelf').scrollTop = 0; });
+      t.appendChild(b);
+    });
+  }
+  function renderShelf(){
+    var s = $('shelf'); s.innerHTML = '';
+    P.cats.filter(function(c){ return c.name === P.tab; })[0].items.forEach(function(n){
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'bin';
+      b.innerHTML = '<span class="e"></span><span class="nm"></span>';
+      b.querySelector('.e').textContent = emo(n); b.querySelector('.nm').textContent = n;
+      b.addEventListener('click', function(){ pick(n); });
+      s.appendChild(b);
+    });
+  }
+  function nextOrder(){
+    P.idx++;
+    if (P.idx >= P.orders.length){ finish(); return; }
+    var dish = P.orders[P.idx];
+    P.cur = { dish:dish, where:Math.random() < 0.5 ? 'in' : 'out', added:[], start:Date.now() };
+    $('cust-face').textContent = FACES[Math.floor(Math.random() * FACES.length)];
+    $('cust-face').style.transform = '';
+    $('order-name').textContent = dish.name;
+    $('order-meta').innerHTML = '<span class="tag ' + P.cur.where + '">' + (P.cur.where === 'in' ? '🪑 Ăn tại chỗ' : '🛍️ Mang về') + '</span>' +
+      '<span class="tag v">' + esc(dish.vessel) + '</span><span class="tag v">KPI ' + fmtTime(dish.kpi) + '</span>';
+    $('bowl-icon').textContent = vesselIcon(dish.vessel);
+    $('btn-recipe').hidden = P.mode !== 'hoc';
+    renderHud(); renderAdded();
+    clearInterval(tick); tick = setInterval(renderTimer, 250); renderTimer();
+  }
+  function fmtTime(s){ s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2); }
+  function elapsed(){ return (Date.now() - P.cur.start) / 1000; }
+  function renderTimer(){
+    if (!P || !P.cur) return;
+    var k = P.cur.dish.kpi, e = elapsed(), left = k - e, bar = $('timebar').firstChild, t = $('timetext');
+    bar.style.width = Math.max(0, Math.min(100, left / k * 100)) + '%';
+    bar.style.background = left < k * 0.25 ? 'var(--red)' : left < k * 0.5 ? 'var(--orange)' : 'var(--green)';
+    if (left >= 0){ t.textContent = '⏱ ' + fmtTime(left); t.classList.remove('late'); }
+    else { t.textContent = 'Trễ ' + fmtTime(-left); t.classList.add('late'); }
+  }
+  function renderHud(){
+    $('hud-level').textContent = (P.mode === 'hoc' ? '📖 ' : '⏱️ ') + P.level;
+    $('hud-count').textContent = 'Khách ' + (P.idx + 1) + '/' + P.orders.length;
+    $('hud-score').textContent = '⭐ ' + P.score;
+  }
+  function renderAdded(){
+    var box = $('added'); box.innerHTML = '';
+    $('bowl-text').textContent = P.cur.added.length ? 'Đã cho ' + P.cur.added.length + ' thứ (bấm ✕ để bỏ)' : 'Chưa cho gì — bấm nguyên liệu bên dưới';
+    P.cur.added.forEach(function(a, i){
+      var c = document.createElement('div'); c.className = 'chip';
+      c.innerHTML = '<span class="no">' + (i + 1) + '.</span><span>' + emo(a.ing) + ' ' + esc(a.ing) + '</span><b>' +
+        (a.qty == null ? '' : esc(fmt(a.qty) + ' ' + a.u)) + '</b><button type="button" class="x" aria-label="Bỏ">✕</button>';
+      c.querySelector('.x').addEventListener('click', function(){ P.cur.added.splice(i, 1); renderAdded(); });
+      box.appendChild(c);
+    });
+    $('bowl').scrollTop = $('bowl').scrollHeight;
+  }
+
+  // ---- Keypad ----
+  var kp = { ing:null, val:'', unit:'g' };
+  function pick(ing){
+    var info = DATA.ings[ing];
+    if (!info.any){ // đá, lắc, đậu phộng…: chỉ cần cho vào, không cân
+      P.cur.added.push({ ing:ing, qty:null, u:'' });
+      renderAdded(); toast(emo(ing) + ' ' + ing);
+      return;
+    }
+    kp.ing = ing; kp.val = ''; kp.unit = info.unit || 'g';
+    $('kp-emoji').textContent = emo(ing); $('kp-name').textContent = ing;
+    renderKp(); $('kp').classList.add('on');
+  }
+  function renderKp(){
+    $('kp-val').textContent = kp.val === '' ? '0' : kp.val;
+    $('kp-unit').textContent = kp.unit;
+    var u = $('kp-units'); u.innerHTML = '';
+    UNITS.forEach(function(x){
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'u' + (x === kp.unit ? ' on' : ''); b.textContent = x;
+      b.addEventListener('click', function(){ kp.unit = x; renderKp(); });
+      u.appendChild(b);
+    });
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('#kp-keys button'), function(b){
+    b.addEventListener('click', function(){
+      var k = b.getAttribute('data-k');
+      if (k === 'del') kp.val = kp.val.slice(0, -1);
+      else if (k === ',') { if (kp.val.indexOf(',') < 0) kp.val = (kp.val || '0') + ','; }
+      else if (k === 'half') { kp.val = kp.val && kp.val.indexOf(',') < 0 && kp.val !== '0' ? kp.val + ',5' : '0,5'; }
+      else if (k === 'fill') { addQty(null); return; }
+      else if (kp.val.length < 6) kp.val = (kp.val === '0' ? '' : kp.val) + k;
+      renderKp();
+    });
+  });
+  function addQty(q){
+    P.cur.added.push({ ing:kp.ing, qty:q, u:q == null ? '' : kp.unit });
+    $('kp').classList.remove('on');
+    renderAdded();
+  }
+  $('kp-ok').addEventListener('click', function(){
+    var q = num(kp.val);
+    if (!(q > 0)){ toast('Nhập số lượng trước nha'); return; }
+    addQty(q);
+  });
+  $('kp-cancel').addEventListener('click', function(){ $('kp').classList.remove('on'); });
+
+  // ---- Serve ----
+  // In-app browsers (Zalo…) may block confirm(): ask for a second tap instead.
+  function twice(btn, msg, fn){
+    var armed = 0;
+    btn.addEventListener('click', function(){
+      if (Date.now() - armed < 2500){ armed = 0; fn(); return; }
+      armed = Date.now(); toast(msg);
+    });
+  }
+  twice($('btn-reset'), 'Bấm “Đổ” lần nữa để đổ bỏ làm lại', function(){ P.cur.added = []; renderAdded(); });
+  $('btn-serve').addEventListener('click', function(){
+    if (!P.cur.added.length){ toast('Chưa cho gì vào mà 😅'); return; }
+    clearInterval(tick);
+    var sec = elapsed(), g = grade(P.cur), late = sec > P.cur.dish.kpi;
+    var counted = P.mode === 'thi' ? late : false; // chế độ Học không tính trễ
+    var pts = g.ok ? (counted ? 60 : 100 + Math.round(Math.max(0, P.cur.dish.kpi - sec) / P.cur.dish.kpi * 50)) : 0;
+    P.score += pts;
+    P.results.push({ dish:P.cur.dish, where:P.cur.where, ok:g.ok, late:late, sec:sec, lines:g.lines });
+    beep(g.ok);
+    $('cust-face').textContent = g.ok ? (counted ? '🙂' : '😋') : '😕';
+    $('cust-face').style.transform = 'scale(1.15)';
+    $('rv-title').textContent = g.ok ? (counted ? 'Đúng món nhưng trễ KPI' : 'Chuẩn SOP! 🎉') : 'Chưa đúng SOP';
+    $('rv-title').className = g.ok && !counted ? 'ok' : 'bad';
+    $('rv-sub').textContent = P.cur.dish.name + ' · ' + (P.cur.where === 'in' ? 'ăn tại chỗ' : 'mang về') + ' · ' +
+      fmtTime(sec) + ' / KPI ' + fmtTime(P.cur.dish.kpi) + ' · +' + pts + ' điểm';
+    var list = $('rv-list'); list.innerHTML = '';
+    g.lines.slice().sort(function(a, b){ return a.ok - b.ok; }).forEach(function(l){
+      var d = document.createElement('div'); d.className = 'rv' + (l.ok ? '' : ' bad');
+      d.innerHTML = '<span class="i">' + (l.ok ? '✅' : '❌') + '</span><span>' + esc(l.text) + (l.sub ? '<small>' + esc(l.sub) + '</small>' : '') + '</span>';
+      list.appendChild(d);
+    });
+    if (late && P.mode === 'thi'){
+      var d = document.createElement('div'); d.className = 'rv bad';
+      d.innerHTML = '<span class="i">⏱️</span><span>Trễ KPI ' + fmtTime(sec - P.cur.dish.kpi) + '</span>';
+      list.insertBefore(d, list.firstChild);
+    }
+    $('rv-next').textContent = P.idx + 1 >= P.orders.length ? 'Xem kết quả ▶' : 'Khách tiếp theo ▶';
+    renderHud();
+    $('rv').classList.add('on');
+  });
+  $('rv-next').addEventListener('click', function(){ $('rv').classList.remove('on'); nextOrder(); });
+  twice($('btn-quit'), 'Bấm ✕ lần nữa để thoát (màn này không được lưu)', function(){
+    clearInterval(tick); P = null; guardBack(false); renderLevels(); show('home');
+  });
+
+  // In Zalo / Facebook a sideways swipe from the screen edge is "Back": keep one extra
+  // history entry while a level is on, so that swipe does not close the game.
+  var guardOn = false;
+  function guardBack(on){
+    if (on && !guardOn){ try { history.pushState({ hmcGuard:1 }, ''); guardOn = true; } catch(e){} }
+    else if (!on && guardOn){ guardOn = false; try { if (history.state && history.state.hmcGuard) history.back(); } catch(e){} }
+  }
+  window.addEventListener('popstate', function(){
+    if (!guardOn) return;
+    try { history.pushState({ hmcGuard:1 }, ''); } catch(e){}
+    toast('Vuốt nhầm rồi — vẫn đang trong ca nha!');
+  });
+
+  // ---- Recipe card ----
+  function openRecipe(dish, where){
+    $('rc-name').textContent = dish.name;
+    $('rc-meta').textContent = dish.code + ' · ' + dish.vessel + ' · KPI ' + fmtTime(dish.kpi);
+    var l = $('rc-list'); l.innerHTML = '';
+    dish.items.forEach(function(it){
+      var d = document.createElement('div');
+      d.innerHTML = '<span>' + emo(it.ing) + ' ' + esc(it.ing) + (it.only ? ' <i style="color:#a15c00">(' + (it.only === 'in' ? 'chỉ khi ăn tại chỗ' : 'chỉ khi mang về') + ')</i>' : '') + '</span><b>' + esc(qtyText(it.alts)) + '</b>';
+      l.appendChild(d);
+    });
+    var notes = [];
+    if (dish.rule) notes.push('🥥 <b>Ăn tại chỗ:</b> cốt dừa cho <b>trước</b>. <b>Mang về:</b> cốt dừa cho <b>sau cùng</b>.' + (where ? ' Đơn này: <b>' + (where === 'in' ? 'ăn tại chỗ' : 'mang về') + '</b>.' : ''));
+    notes.push('Định lượng 1 con số được lệch ±10%. Có ghi 2 cách (vd 2 viên hoặc 14 g) thì nhập cách nào cũng được.');
+    $('rc-note').innerHTML = notes.join('<br>');
+    $('rc').classList.add('on');
+  }
+  $('btn-recipe').addEventListener('click', function(){ openRecipe(P.cur.dish, P.cur.where); });
+  $('rc-close').addEventListener('click', function(){ $('rc').classList.remove('on'); });
+  $('btn-book').addEventListener('click', function(){
+    // Sổ công thức: pick a dish from a simple list, then show its card
+    $('rc-name').textContent = 'Sổ công thức';
+    $('rc-meta').textContent = 'Bấm vào món để xem định lượng';
+    $('rc-note').innerHTML = '';
+    var l = $('rc-list'); l.innerHTML = '';
+    DATA.groups.forEach(function(g){
+      var h = document.createElement('div'); h.innerHTML = '<b style="color:var(--orange)">' + esc(g) + '</b>'; l.appendChild(h);
+      DATA.dishes.filter(function(d){ return d.group === g; }).forEach(function(d){
+        var r = document.createElement('div'); r.style.cursor = 'pointer';
+        r.innerHTML = '<span>' + vesselIcon(d.vessel) + ' ' + esc(d.name) + '</span><b>›</b>';
+        r.addEventListener('click', function(){ openRecipe(d); });
+        l.appendChild(r);
+      });
+    });
+    $('rc').classList.add('on');
+  });
+
+  // ---- Level end + send to the manager's sheet ----
+  function finish(){
+    clearInterval(tick);
+    var R = P.results, n = R.length, ok = R.filter(function(r){ return r.ok; }).length;
+    var onTime = R.filter(function(r){ return r.ok && !r.late; }).length;
+    var avg = Math.round(R.reduce(function(s, r){ return s + r.sec; }, 0) / n);
+    var ratio = ok / n, stars = ratio === 1 && (P.mode === 'hoc' || onTime === n) ? 3 : ratio >= 0.8 ? 2 : ratio >= 0.5 ? 1 : 0;
+    var key = P.mode + '|' + P.level, best = loadJSON(K.best, {});
+    if (best[key] == null || stars > best[key]){ best[key] = stars; store(K.best, JSON.stringify(best)); }
+    $('end-title').textContent = stars >= 2 ? 'Làm tốt lắm, ' + P.name + '! 🎉' : 'Luyện thêm chút nữa nha 💪';
+    $('end-stars').textContent = starText(stars);
+    $('end-score').textContent = P.score + ' điểm';
+    $('end-sub').textContent = 'Đúng SOP ' + ok + '/' + n + ' món' + (P.mode === 'thi' ? ' · đúng giờ KPI ' + onTime + '/' + n : '') + ' · trung bình ' + fmtTime(avg) + '/món';
+    var mist = [];
+    R.forEach(function(r){
+      var bad = r.lines.filter(function(l){ return !l.ok; }).map(function(l){ return l.text + (l.sub ? ' (' + l.sub.replace('Chuẩn: ', 'chuẩn ') + ')' : ''); });
+      if (r.late && P.mode === 'thi') bad.push('trễ KPI');
+      if (bad.length) mist.push(r.dish.name + ' – ' + (r.where === 'in' ? 'tại chỗ' : 'mang về') + ': ' + bad.join('; '));
+    });
+    $('end-mist').innerHTML = mist.length ? '<b>Cần sửa:</b><br>' + mist.map(esc).join('<br>') : '🎯 Không sai món nào!';
+    var payload = { action:'train', pin:load(K.pin), name:P.name, mode:P.mode === 'thi' ? 'Thi' : 'Học', level:P.level,
+                    orders:n, correct:ok, onTime:onTime, score:P.score, avgSec:avg, mistakes:mist.join(' | '), app:appName(),
+                    id:Date.now().toString(36) + Math.random().toString(36).slice(2, 7) }; // lets the sheet ignore a repeated send
+    $('end-save').textContent = 'Đang gửi kết quả cho quản lý…';
+    send(payload);
+    P.done = true;
+    guardBack(false);
+    show('end');
+  }
+  function send(p){
+    call(p).then(function(res){
+      if (res && res.ok){ $('end-save').textContent = '✅ Đã gửi kết quả cho quản lý'; return; }
+      var box = loadJSON(K.outbox, []); box.push(p); store(K.outbox, JSON.stringify(box));
+      $('end-save').textContent = 'Chưa gửi được (mất mạng) — sẽ tự gửi lại lần sau mở game.';
+    });
+  }
+  function flushOutbox(){
+    var box = loadJSON(K.outbox, []);
+    if (!box.length) return;
+    store(K.outbox, '[]');
+    box.forEach(function(p){ call(p).then(function(res){ if (!res || !res.ok){ var b = loadJSON(K.outbox, []); b.push(p); store(K.outbox, JSON.stringify(b)); } }); });
+  }
+  function appName(){
+    var ua = navigator.userAgent || '';
+    return /Zalo/i.test(ua) ? 'Zalo' : /FBAN|FBAV|FB_IAB|Messenger/i.test(ua) ? 'Facebook' : 'Trình duyệt';
+  }
+  $('btn-home').addEventListener('click', function(){ renderLevels(); show('home'); });
+  $('btn-again').addEventListener('click', function(){ startLevel(P.level); });
+
+  // ---- Little sounds ----
+  var ac = null;
+  function beep(ok){
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      var notes = ok ? [660, 880, 1320] : [330, 220], t = ac.currentTime + 0.01;
+      notes.forEach(function(f, i){
+        var o = ac.createOscillator(), g = ac.createGain();
+        o.type = 'triangle'; o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t + i * 0.09); g.gain.linearRampToValueAtTime(0.12, t + i * 0.09 + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.09 + 0.16);
+        o.connect(g); g.connect(ac.destination); o.start(t + i * 0.09); o.stop(t + i * 0.09 + 0.2);
+      });
+    } catch(e){}
+  }
+
+  // ---- Startup: cached recipes first, then refresh from the sheet ----
+  var cached = loadJSON(K.rows, null), pin = load(K.pin);
+  if (cached && pin && ready(cached)){
+    call({ action:'recipes', pin:pin }).then(function(res){
+      if (res && res.ok){ store(K.rows, JSON.stringify(res.rows)); if (!P){ DATA = build(res.rows); renderLevels(); } }
+      else if (res && res.reason === 'pin'){ store(K.pin, ''); show('pin'); $('pin-msg').textContent = 'PIN đã đổi, nhập PIN mới nha.'; }
+    });
+    flushOutbox();
+  } else show('pin');
+})();
+</script>
+</body>
+</html>
