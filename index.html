@@ -1820,7 +1820,7 @@
     $('top-sub').textContent = 'Đang tải…';
     var last = loadJSON(LAST_KEY, null);
     var mine = last && last.date === todayStr() && !last.pendingForm && !last.blocked ? last.code : '';
-    callSheet({ action:'top', code:mine || '' }, 10000).then(function(res){
+    callSheet({ action:'top', code:mine || '', token:(mine && last.token) || '' }, 10000).then(function(res){
       if (!isShown('top')) return;
       if (!res || !res.ok){ $('top-sub').textContent = 'Chưa tải được bảng, bạn thử lại sau ít phút nha.'; return; }
       var d = vnNow();
@@ -1976,7 +1976,7 @@
                               place:$('su-place').value, placeOther:$('su-place-other').value.trim() });
       if (week){
         var w = loadWeek();
-        if (res && res.ok === false && res.reason === 'weekly') w.blocked = true;
+        if (res && res.ok === false && (res.reason === 'weekly' || res.reason === 'full')) w.blocked = true;
         else {
           if (offline) sendToSheet(payload);
           addVoucher({ code:r.code, tier:1, playDate:r.date, validFrom:r.validFrom, validTo:r.validTo, token:r.token });
@@ -1987,7 +1987,7 @@
         renderWeek();
         return;
       }
-      if (res && res.ok === false && (res.reason === 'daily' || res.reason === 'cap')){
+      if (res && res.ok === false && (res.reason === 'daily' || res.reason === 'cap' || res.reason === 'full')){
         r.pendingForm = false;
         r.blocked = res.reason;
         saveJSON(LAST_KEY, r);
@@ -2024,6 +2024,7 @@
       title = win ? 'Cứu được Vợ Chè! 🏆' : 'Giỏi quá! 🎉';
       msg = r.blocked === 'daily'
         ? 'Số điện thoại này đã nhận quà hôm nay rồi — hẹn bạn ngày mai ở HAMICHEE nha!'
+        : r.blocked === 'full' ? 'Hôm nay quà đã phát hết rồi — hẹn bạn ngày mai ở HAMICHEE nha!'
         : 'Số điện thoại này đang giữ đủ 3 mã chưa dùng — ghé HAMICHEE dùng bớt rồi nhận thêm quà nha!';
     }
     else if (r.tier && r.capped){
