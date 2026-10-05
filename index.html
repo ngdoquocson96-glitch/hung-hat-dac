@@ -2,6 +2,13 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
+<script>
+  // Máy rất cũ không đọc được ảnh WebP: tự quay về ảnh PNG cũ.
+  window.addEventListener('error', function(e){
+    var t = e.target;
+    if (t && t.tagName === 'IMG' && /\.webp\?v=3$/.test(t.getAttribute('src') || '')) t.src = t.getAttribute('src').replace('.webp?v=3', '.png?v=2');
+  }, true);
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>HAMICHEE — Hứng Hạt Đác</title>
 <style>
@@ -458,9 +465,9 @@
     <div class="t2010-ribbon">🌸 Mừng 20/10 · cứu vợ tặng chị em 🌸</div>
     <button type="button" class="banner js-vouchers" id="home-banner"></button>
     <div class="versus">
-      <img class="hero fade-x" src="assets/chong-dac-sprite.png?v=2" alt="Chồng Đác">
+      <img class="hero fade-x" src="assets/chong-dac-sprite.webp?v=3" alt="Chồng Đác">
       <b>VS</b>
-      <img class="villain fade-round" src="assets/chua-te-sprite.png?v=2" alt="Chúa Tể Chất Bảo Quản">
+      <img class="villain fade-round" src="assets/chua-te-sprite.webp?v=3" alt="Chúa Tể Chất Bảo Quản">
     </div>
     <p class="sub">Giúp Chồng Đác vượt 3 màn, đánh bại Chúa Tể Chất Bảo Quản để cứu Vợ Chè!</p>
     <div class="howto">
@@ -480,8 +487,8 @@
   <div id="screen-story" class="screen">
     <h2>Vợ Chè bị bắt rồi!</h2>
     <div class="story-art">
-      <img class="villain fade-round" src="assets/chua-te-sprite.png?v=2" alt="">
-      <div class="cage"><img class="fade-x" src="assets/vo-che-sprite.png?v=2" alt=""></div>
+      <img class="villain fade-round" src="assets/chua-te-sprite.webp?v=3" alt="">
+      <div class="cage"><img class="fade-x" src="assets/vo-che-sprite.webp?v=3" alt=""></div>
     </div>
     <p>Chúa Tể Chất Bảo Quản ghét chè nấu mới mỗi ngày, nên bắt Vợ Chè nhốt vào hang.</p>
     <p>Chồng Đác phải hứng thật nhiều hạt đác để có sức mạnh đi cứu vợ!</p>
@@ -504,10 +511,10 @@
     </div>
     <div id="playfield">
       <div id="scenery" aria-hidden="true"></div>
-      <img id="boss" class="fade-round" src="assets/chua-te-sprite.png?v=2" alt="">
+      <img id="boss" class="fade-round" src="assets/chua-te-sprite.webp?v=3" alt="">
       <div id="aura"></div>
       <div id="shadow"></div>
-      <img id="player" class="fade-x" src="assets/chong-dac-sprite.png?v=2" alt="" draggable="false">
+      <img id="player" class="fade-x" src="assets/chong-dac-sprite.webp?v=3" alt="" draggable="false">
       <div id="shield"></div>
       <div id="countdown"></div>
       <div id="level-card"><div class="lv" id="lc-lv"></div><div class="nm" id="lc-nm"></div><div class="gl" id="lc-gl"></div></div>
@@ -521,8 +528,8 @@
       <div id="rescue">
         <h2 id="rescue-title">Cứu được Vợ Chè rồi! 🎉</h2>
         <div class="pair">
-          <img class="hero fade-x" src="assets/chong-dac-sprite.png?v=2" alt="">
-          <div class="cage" id="rescue-cage"><img class="fade-x" src="assets/vo-che-sprite.png?v=2" alt=""></div>
+          <img class="hero fade-x" src="assets/chong-dac-sprite.webp?v=3" alt="">
+          <div class="cage" id="rescue-cage"><img class="fade-x" src="assets/vo-che-sprite.webp?v=3" alt=""></div>
         </div>
       </div>
     </div>
@@ -584,7 +591,7 @@
 
   <!-- Cutscenes: Google Flow clips (intro before the story, rescue after beating the boss) -->
   <div id="cutscene">
-    <video id="cs-intro" src="assets/clip-intro.mp4" poster="assets/clip-intro.jpg" playsinline webkit-playsinline preload="auto"></video>
+    <video id="cs-intro" src="assets/clip-intro.mp4" poster="assets/clip-intro.jpg" playsinline webkit-playsinline preload="metadata"></video>
     <video id="cs-rescue" src="assets/clip-rescue.mp4" poster="assets/clip-rescue.jpg" playsinline webkit-playsinline preload="none"></video>
     <button type="button" class="cs-btn" id="cs-sound" hidden>🔊 Bật tiếng</button>
     <button type="button" class="cs-btn" id="cs-skip">Bỏ qua ▶</button>
@@ -743,16 +750,16 @@
     var md = todayStr().slice(5);
     return /[?&]theme=2010\b/.test(location.search) || (md >= CONFIG.theme2010.from && md <= CONFIG.theme2010.to);
   })();
-  var VO_CHE_SRC = 'assets/vo-che-sprite.png?v=2';
+  var VO_CHE_SRC = 'assets/vo-che-sprite.webp?v=3';
   if (THEME_2010){
     document.documentElement.classList.add('t2010');
-    // Optional Vợ Chè in áo dài: used only if assets/vo-che-2010.png?v=2 has been uploaded.
+    // Optional Vợ Chè in áo dài: used only if assets/vo-che-2010.webp?v=3 has been uploaded.
     var ad = new Image();
     ad.onload = function(){
-      VO_CHE_SRC = 'assets/vo-che-2010.png?v=2';
-      Array.prototype.forEach.call(document.querySelectorAll('img[src="assets/vo-che-sprite.png?v=2"]'), function(im){ im.src = VO_CHE_SRC; });
+      VO_CHE_SRC = 'assets/vo-che-2010.webp?v=3';
+      Array.prototype.forEach.call(document.querySelectorAll('img[src="assets/vo-che-sprite.webp?v=3"]'), function(im){ im.src = VO_CHE_SRC; });
     };
-    ad.src = 'assets/vo-che-2010.png?v=2';
+    ad.src = 'assets/vo-che-2010.webp?v=3';
   }
 
   function $(id){ return document.getElementById(id); }
@@ -1002,6 +1009,9 @@
 
   // ---- Cutscenes: 10-second Google Flow clips, skippable ----
   var CLIPS = { intro:$('cs-intro'), rescue:$('cs-rescue') };
+  // Tải clip mở đầu sau khi trang đã hiện xong, để màn hình chính lên nhanh trên 4G yếu.
+  function warmIntro(){ setTimeout(function(){ if (CLIPS.intro.preload !== 'auto') CLIPS.intro.preload = 'auto'; }, 800); }
+  if (document.readyState === 'complete') warmIntro(); else window.addEventListener('load', warmIntro);
   var cs = { vid:null, done:null, timer:null };
   function playCutscene(name, done){
     var v = CLIPS[name];
@@ -1299,7 +1309,15 @@
     playMusic(lvl().music);
     lastTick = performance.now();
     spawnTimeoutId = setTimeout(scheduleSpawn, 400);
-    loopId = setInterval(loop, 16);
+    // Run on the screen's own refresh (60/90/120Hz) instead of a 16ms timer, so falling items move without judder.
+    cancelAnimationFrame(loopId);
+    loopId = requestAnimationFrame(frame);
+  }
+  function frame(){
+    loopId = null;
+    if (!state || !state.active) return;
+    loop();
+    if (state && state.active && loopId === null) loopId = requestAnimationFrame(frame);
   }
   function pause(){
     if (!state || !state.running || !state.active) return;
@@ -1307,7 +1325,7 @@
     stopMusic();
     dragId = null; // the browser may never send pointerup for a finger held during an app switch
     clearTimeout(spawnTimeoutId);
-    clearInterval(loopId);
+    cancelAnimationFrame(loopId); loopId = null;
   }
   document.addEventListener('visibilitychange', function(){
     if (document.hidden){ pause(); stopMusic(); if (cs.vid) cs.vid.pause(); }
@@ -1654,7 +1672,7 @@
     stopMusic();
     dragId = null;
     clearTimeout(spawnTimeoutId);
-    clearInterval(loopId);
+    cancelAnimationFrame(loopId); loopId = null;
     timerEl.classList.remove('hurry');
     dragHint.style.display = 'none';
     levelCard.style.display = 'none';
@@ -2018,7 +2036,7 @@
   // ---- Result ----
   function renderResult(r){
     var win = r.tier === 2 || r.outcome === 'win';
-    $('result-img').src = win ? VO_CHE_SRC : 'assets/chong-dac-sprite.png?v=2';
+    $('result-img').src = win ? VO_CHE_SRC : 'assets/chong-dac-sprite.webp?v=3';
     var title, msg;
     if (r.tier && r.blocked){
       title = win ? 'Cứu được Vợ Chè! 🏆' : 'Giỏi quá! 🎉';
@@ -2075,7 +2093,8 @@
 
   function loadImg(src){
     return new Promise(function(resolve){
-      var im = new Image(); im.onload = function(){ resolve(im); }; im.onerror = function(){ resolve(null); }; im.src = src;
+      var im = new Image(); im.onload = function(){ resolve(im); };
+      im.onerror = function(){ if (/\.webp\?v=3$/.test(im.src)) im.src = src.replace('.webp?v=3', '.png?v=2'); else resolve(null); }; im.src = src;
     });
   }
   function roundRect(ctx, x, y, w, h, r){
@@ -2102,7 +2121,7 @@
     challenge.text = (win ? 'Mình vừa hứng ' + r.score + ' hạt đác và cứu được Vợ Chè 🏆'
                           : 'Mình hứng được ' + r.score + ' hạt đác, tới màn ' + (r.reached || 1)) +
                      ' trong game Hứng Hạt Đác của HAMICHEE! Bạn dám thử không? 😏 ' + GAME_URL;
-    Promise.all([loadImg('assets/chong-dac-sprite.png?v=2'), loadImg(VO_CHE_SRC), loadImg('assets/chua-te-sprite.png?v=2')])
+    Promise.all([loadImg('assets/chong-dac-sprite.webp?v=3'), loadImg(VO_CHE_SRC), loadImg('assets/chua-te-sprite.webp?v=3')])
       .then(function(ims){
         var W = 1080, H = 1920, c = document.createElement('canvas'); c.width = W; c.height = H;
         var ctx = c.getContext('2d');
